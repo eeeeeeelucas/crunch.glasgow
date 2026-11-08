@@ -1,0 +1,421 @@
+```html
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CRUNCH GLASGOW — Event & Nightlife Listings</title>
+
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            crunch: {
+              bg: '#050b14',
+              card: '#0a1424',
+              border: '#162844',
+              pink: '#ff2a6d',
+              yellow: '#FACC15',
+              cyan: '#00f5d4'
+            }
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    body {
+      background-color: #050b14;
+      color: #F9FAFB;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      padding-bottom: 75px;
+    }
+
+    /* Custom Pixel / Retro Border Utilities */
+    .pixel-border {
+      border: 1px solid #162844;
+      box-shadow: inset 0 0 0 1px #0a1424;
+    }
+    .pixel-border:hover {
+      border-color: #ff2a6d;
+    }
+
+    /* Scrollbar hide utility */
+    .no-scrollbar::-webkit-scrollbar { display: none; }
+    .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col antialiased selection:bg-crunch-pink selection:text-black">
+
+  <!-- TOP HEADER -->
+  <header class="border-b border-crunch-border bg-crunch-bg sticky top-0 z-40 px-4 py-3">
+    <div class="max-w-md mx-auto flex items-center justify-between">
+      <div class="flex items-center gap-2 cursor-pointer" onclick="navigateTo('home'); resetAllFilters();">
+        <div class="w-7 h-7 rounded bg-crunch-pink text-black font-black flex items-center justify-center text-xs tracking-tighter shadow-[0_0_10px_rgba(255,42,109,0.5)]">
+          C!
+        </div>
+        <div>
+          <h1 class="text-xs tracking-widest text-gray-100 uppercase font-black leading-none">
+            CRUNCH<span class="text-crunch-pink">.GLASGOW</span>
+          </h1>
+          <p class="text-[8px] text-gray-400 uppercase tracking-wider mt-0.5">Glasgow Event & Nightlife</p>
+        </div>
+      </div>
+      <button onclick="toggleModal('add-event-modal')" class="text-[10px] text-gray-200 hover:text-white px-2.5 py-1 pixel-border rounded bg-crunch-card font-bold hover:border-crunch-pink transition-colors">
+        + SUBMIT
+      </button>
+    </div>
+  </header>
+
+  <!-- CATEGORY FILTER BAR (PERMANENT TOP BAR) -->
+  <div class="border-b border-crunch-border bg-crunch-bg/95 backdrop-blur sticky top-[49px] z-30 px-4 py-2">
+    <div class="max-w-md mx-auto flex items-center gap-2 overflow-x-auto no-scrollbar" id="category-bar">
+      <button onclick="setCategory('All')" id="cat-btn-All" class="cat-btn px-3 py-1 text-[10px] uppercase font-bold rounded pixel-border bg-crunch-pink text-black border-crunch-pink whitespace-nowrap">
+        All
+      </button>
+      <button onclick="setCategory('Live Music')" id="cat-btn-Live Music" class="cat-btn px-3 py-1 text-[10px] uppercase font-bold rounded pixel-border bg-crunch-card text-gray-400 hover:text-white whitespace-nowrap">
+        🎸 Live Music
+      </button>
+      <button onclick="setCategory('Clubs')" id="cat-btn-Clubs" class="cat-btn px-3 py-1 text-[10px] uppercase font-bold rounded pixel-border bg-crunch-card text-gray-400 hover:text-white whitespace-nowrap">
+        ⚡ Clubs
+      </button>
+      <button onclick="setCategory('Theatre')" id="cat-btn-Theatre" class="cat-btn px-3 py-1 text-[10px] uppercase font-bold rounded pixel-border bg-crunch-card text-gray-400 hover:text-white whitespace-nowrap">
+        🎭 Theatre
+      </button>
+      <button onclick="setCategory('Stand-Up Comedy')" id="cat-btn-Stand-Up Comedy" class="cat-btn px-3 py-1 text-[10px] uppercase font-bold rounded pixel-border bg-crunch-card text-gray-400 hover:text-white whitespace-nowrap">
+        🎤 Stand-Up Comedy
+      </button>
+      <button onclick="setCategory('Workshops')" id="cat-btn-Workshops" class="cat-btn px-3 py-1 text-[10px] uppercase font-bold rounded pixel-border bg-crunch-card text-gray-400 hover:text-white whitespace-nowrap">
+        🎨 Workshops
+      </button>
+    </div>
+  </div>
+
+  <!-- VIEW 1: HOMEPAGE / LISTINGS FEED -->
+  <main id="view-home" class="flex-1 max-w-md w-full mx-auto px-4 py-4 space-y-3">
+
+    <!-- Search Input Filter -->
+    <div class="relative">
+      <input type="text" id="search-input" onkeyup="renderFeed()" placeholder="// Search band, venue, location..." class="w-full bg-crunch-card pixel-border rounded px-3 py-2 text-xs text-gray-200 placeholder-gray-600 focus:outline-none focus:border-crunch-pink" />
+      <span class="absolute right-3 top-2.5 text-[10px] text-gray-600">🔍</span>
+    </div>
+
+    <!-- Active Filter Status Bar -->
+    <div class="flex items-center justify-between text-[10px] text-gray-500 uppercase tracking-widest font-bold">
+      <span id="filter-status-label">// UPCOMING GLASGOW LISTINGS</span>
+      <span id="event-count-badge" class="text-crunch-yellow">0 ITEMS</span>
+    </div>
+
+    <!-- Active Date Filter Pill Banner -->
+    <div id="active-date-pill" class="hidden flex items-center justify-between bg-crunch-card pixel-border border-crunch-pink/50 rounded px-3 py-1.5 text-xs">
+      <span class="text-crunch-pink text-[10px] font-bold" id="active-date-text">DATE FILTER ACTIVE</span>
+      <button onclick="clearDateFilter()" class="text-gray-400 hover:text-white text-[10px] bg-crunch-border px-2 py-0.5 rounded font-bold">[CLEAR DATE]</button>
+    </div>
+
+    <!-- Events Cards Grid -->
+    <div id="events-grid" class="space-y-4">
+      <!-- Injected Event Cards -->
+    </div>
+  </main>
+
+  <!-- VIEW 2: CALENDAR PAGE -->
+  <main id="view-calendar" class="hidden flex-1 max-w-md w-full mx-auto px-4 py-4 space-y-4">
+    <div class="pixel-border bg-crunch-card p-4 rounded">
+      <div class="flex items-center justify-between mb-3 border-b border-crunch-border pb-2">
+        <span class="text-xs text-crunch-pink font-bold">// SELECT EVENT DATE</span>
+        <span class="text-xs text-crunch-yellow font-bold">NOVEMBER 2026</span>
+      </div>
+
+      <!-- Days Header Grid -->
+      <div class="grid grid-cols-7 gap-1 text-center text-[10px] text-gray-500 mb-2 font-bold">
+        <div>M</div><div>T</div><div>W</div><div>T</div><div>F</div><div>S</div><div>S</div>
+      </div>
+
+      <!-- Calendar Days Grid -->
+      <div class="grid grid-cols-7 gap-1 text-center text-xs" id="calendar-days">
+        <!-- Injected Calendar Days -->
+      </div>
+    </div>
+
+    <!-- Custom HTML Date Selector Input -->
+    <div class="pixel-border bg-crunch-card p-3 rounded flex items-center justify-between text-xs">
+      <label class="text-[10px] text-gray-400 uppercase font-bold">Pick Specific Date:</label>
+      <input type="date" id="calendar-date-picker" onchange="selectDateFromPicker(this.value)" class="bg-crunch-bg pixel-border rounded px-2.5 py-1 text-xs text-gray-200 focus:outline-none focus:border-crunch-pink" />
+    </div>
+  </main>
+
+  <!-- TICKET BOOKING MODAL -->
+  <div id="ticket-modal" class="fixed inset-0 bg-black/90 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-crunch-card pixel-border rounded max-w-xs w-full p-4 relative font-mono">
+      <button onclick="toggleModal('ticket-modal')" class="absolute top-2 right-2 text-gray-500 hover:text-white text-xs font-bold">[✕]</button>
+      <div id="modal-content"></div>
+    </div>
+  </div>
+
+  <!-- PROMOTER EVENT SUBMISSION MODAL -->
+  <div id="add-event-modal" class="fixed inset-0 bg-black/90 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-crunch-card pixel-border rounded max-w-md w-full p-4 relative font-mono max-h-[90vh] overflow-y-auto text-xs">
+      <button onclick="toggleModal('add-event-modal')" class="absolute top-2 right-2 text-gray-500 hover:text-white text-xs font-bold">[✕]</button>
+      <h2 class="text-xs font-bold text-crunch-pink uppercase mb-1">// SUBMIT EVENT LISTING</h2>
+      <p class="text-[10px] text-gray-500 mb-3">Direct venue & promoter listing portal for CRUNCH Glasgow.</p>
+      
+      <form onsubmit="handleCreateEvent(event)" class="space-y-2.5">
+        <div>
+          <label class="block text-[10px] text-gray-400 mb-0.5">EVENT TITLE</label>
+          <input type="text" id="new-title" required placeholder="e.g. Subculture w/ Domenic Cappello" class="w-full bg-crunch-bg pixel-border rounded p-2 text-gray-100 focus:border-crunch-pink focus:outline-none"/>
+        </div>
+        <div class="grid grid-cols-2 gap-2">
+          <div>
+            <label class="block text-[10px] text-gray-400 mb-0.5">VENUE NAME</label>
+            <input type="text" id="new-venue" required placeholder="e.g. Sub Club" class="w-full bg-crunch-bg pixel-border rounded p-2 text-gray-100 focus:border-crunch-pink focus:outline-none"/>
+          </div>
+          <div>
+            <label class="block text-[10px] text-gray-400 mb-0.5">NEIGHBORHOOD</label>
+            <select id="new-area" class="w-full bg-crunch-bg pixel-border rounded p-2 text-gray-100 focus:border-crunch-pink focus:outline-none">
+              <option value="City Centre">City Centre</option>
+              <option value="West End">West End</option>
+              <option value="Southside">Southside</option>
+              <option value="East End">East End</option>
+              <option value="Merchant City">Merchant City</option>
+            </select>
+          </div>
+        </div>
+        <div class="grid grid-cols-2 gap-2">
+          <div>
+            <label class="block text-[10px] text-gray-400 mb-0.5">DATE & TIME</label>
+            <input type="datetime-local" id="new-date" required class="w-full bg-crunch-bg pixel-border rounded p-2 text-gray-100 focus:border-crunch-pink focus:outline-none"/>
+          </div>
+          <div>
+            <label class="block text-[10px] text-gray-400 mb-0.5">CATEGORY</label>
+            <select id="new-category" class="w-full bg-crunch-bg pixel-border rounded p-2 text-gray-100 focus:border-crunch-pink focus:outline-none">
+              <option value="Live Music">Live Music</option>
+              <option value="Clubs">Clubs</option>
+              <option value="Theatre">Theatre</option>
+              <option value="Stand-Up Comedy">Stand-Up Comedy</option>
+              <option value="Workshops">Workshops</option>
+            </select>
+          </div>
+        </div>
+        <div class="grid grid-cols-2 gap-2">
+          <div>
+            <label class="block text-[10px] text-gray-400 mb-0.5">PRICE (£)</label>
+            <input type="number" step="0.50" id="new-price" required placeholder="12.00" class="w-full bg-crunch-bg pixel-border rounded p-2 text-gray-100 focus:border-crunch-pink focus:outline-none"/>
+          </div>
+          <div>
+            <label class="block text-[10px] text-gray-400 mb-0.5">BOOKING FEE</label>
+            <input type="text" disabled value="£0.50 (Flat)" class="w-full bg-crunch-bg pixel-border rounded p-2 text-gray-500"/>
+          </div>
+        </div>
+        <div>
+          <label class="block text-[10px] text-gray-400 mb-0.5">PHOTO URL (OPTIONAL)</label>
+          <input type="url" id="new-image" placeholder="https://..." class="w-full bg-crunch-bg pixel-border rounded p-2 text-gray-100 focus:border-crunch-pink focus:outline-none"/>
+        </div>
+        <div>
+          <label class="block text-[10px] text-gray-400 mb-0.5">DESCRIPTION</label>
+          <textarea id="new-desc" rows="2" required placeholder="Lineup, door times, age policies..." class="w-full bg-crunch-bg pixel-border rounded p-2 text-gray-100 focus:border-crunch-pink focus:outline-none"></textarea>
+        </div>
+        <button type="submit" class="w-full pixel-border bg-crunch-pink text-black font-bold py-2.5 rounded uppercase tracking-wider hover:opacity-90 transition-opacity mt-1">
+          PUBLISH EVENT TO CRUNCH
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- FIXED BOTTOM NAVIGATION BAR -->
+  <nav class="fixed bottom-0 left-0 right-0 border-t border-crunch-border bg-crunch-bg/95 backdrop-blur z-40 px-6 py-2">
+    <div class="max-w-md mx-auto flex items-center justify-around text-xs">
+      <button onclick="navigateTo('home')" id="nav-home" class="flex flex-col items-center gap-1 text-crunch-pink font-bold">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 00-1-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>
+        <span class="text-[10px] tracking-wider">HOME</span>
+      </button>
+      <button onclick="navigateTo('calendar')" id="nav-calendar" class="flex flex-col items-center gap-1 text-gray-500 hover:text-white">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+        <span class="text-[10px] tracking-wider">CALENDAR</span>
+      </button>
+    </div>
+  </nav>
+
+  <!-- JAVASCRIPT APPLICATION CODE -->
+  <script>
+    // REAL GLASGOW EVENTS SEED DATA (NOVEMBER 2026)
+    let eventsData = [
+      {
+        id: "1",
+        title: "King Tut's Presents: Jivephant",
+        venue: "King Tut's Wah Wah Hut",
+        neighborhood: "City Centre",
+        category: "Live Music",
+        dateISO: "2026-11-08",
+        dateStr: "Sun 8 Nov • 19:30",
+        price: 10.00,
+        fee: 0.50,
+        desc: "King Tut's Presents local emerging Scottish indie acts Jivephant, CRT, Nido and Dive Casino.",
+        image: "https://images.unsplash.com/photo-1501386761578-eac5c94b800a?auto=format&fit=crop&w=800&q=80"
+      },
+      {
+        id: "2",
+        title: "Grace Cummings live at King Tut's",
+        venue: "King Tut's Wah Wah Hut",
+        neighborhood: "City Centre",
+        category: "Live Music",
+        dateISO: "2026-11-10",
+        dateStr: "Tue 10 Nov • 19:30",
+        price: 15.00,
+        fee: 0.50,
+        desc: "Australian singer-songwriter Grace Cummings performs live on St Vincent Street.",
+        image: "https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?auto=format&fit=crop&w=800&q=80"
+      },
+      {
+        id: "3",
+        title: "Yard Act Live at Barrowlands",
+        venue: "Barrowland Ballroom",
+        neighborhood: "East End",
+        category: "Live Music",
+        dateISO: "2026-11-11",
+        dateStr: "Wed 11 Nov • 19:00",
+        price: 22.00,
+        fee: 0.50,
+        desc: "Leeds post-punk quartet bring their headline tour to the iconic Barrowland Ballroom.",
+        image: "https://images.unsplash.com/photo-1514525253161-7a46d19cd819?auto=format&fit=crop&w=800&q=80"
+      },
+      {
+        id: "4",
+        title: "RARE Club // Wheats",
+        venue: "Sub Club",
+        neighborhood: "City Centre",
+        category: "Clubs",
+        dateISO: "2026-11-12",
+        dateStr: "Thu 12 Nov • 23:00",
+        price: 10.00,
+        fee: 0.50,
+        desc: "RARE Club presents UK tech house producer Wheats at Jamaica Street basement.",
+        image: "https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?auto=format&fit=crop&w=800&q=80"
+      },
+      {
+        id: "5",
+        title: "Subculture w/ Harri & Domenic",
+        venue: "Sub Club",
+        neighborhood: "City Centre",
+        category: "Clubs",
+        dateISO: "2026-11-14",
+        dateStr: "Sat 14 Nov • 23:00",
+        price: 15.00,
+        fee: 0.50,
+        desc: "Glasgow's longest-running underground house music residency.",
+        image: "https://images.unsplash.com/photo-1470225620780-dba8ba36b745?auto=format&fit=crop&w=800&q=80"
+      },
+      {
+        id: "6",
+        title: "Eagles of Death Metal — 20th Anniv",
+        venue: "Barrowland Ballroom",
+        neighborhood: "East End",
+        category: "Live Music",
+        dateISO: "2026-11-18",
+        dateStr: "Wed 18 Nov • 19:30",
+        price: 27.50,
+        fee: 0.50,
+        desc: "American rockers celebrate 20 years of Death By Sexy live under Barrowland stars.",
+        image: "https://images.unsplash.com/photo-1498038432885-c6f3f1b912ee?auto=format&fit=crop&w=800&q=80"
+      },
+      {
+        id: "7",
+        title: "Opus Kink live at King Tut's",
+        venue: "King Tut's Wah Wah Hut",
+        neighborhood: "City Centre",
+        category: "Live Music",
+        dateISO: "2026-11-19",
+        dateStr: "Thu 19 Nov • 19:30",
+        price: 13.00,
+        fee: 0.50,
+        desc: "Horn-fuelled post-punk, jazz, and rock 'n' roll chaos live at King Tut's.",
+        image: "https://images.unsplash.com/photo-1460723237483-7a6dc9d0b212?auto=format&fit=crop&w=800&q=80"
+      },
+      {
+        id: "8",
+        title: "DJ BORING & Sam Alfred",
+        venue: "Sub Club",
+        neighborhood: "City Centre",
+        category: "Clubs",
+        dateISO: "2026-11-19",
+        dateStr: "Thu 19 Nov • 23:00",
+        price: 20.00,
+        fee: 0.50,
+        desc: "Lo-fi house selector DJ BORING takes over Sub Club w/ Sam Alfred.",
+        image: "https://images.unsplash.com/photo-1598488035139-bdbb2231ce04?auto=format&fit=crop&w=800&q=80"
+      },
+      {
+        id: "9",
+        title: "Glasgow Comedy Showcase",
+        venue: "The Glee Club",
+        neighborhood: "City Centre",
+        category: "Stand-Up Comedy",
+        dateISO: "2026-11-20",
+        dateStr: "Fri 20 Nov • 20:00",
+        price: 14.00,
+        fee: 0.50,
+        desc: "Top touring UK stand-up comedians and local Glasgow circuit headliners.",
+        image: "https://images.unsplash.com/photo-1585699324551-f6c309eedeca?auto=format&fit=crop&w=800&q=80"
+      },
+      {
+        id: "10",
+        title: "Rizzle Kicks — UK Tour",
+        venue: "Barrowland Ballroom",
+        neighborhood: "East End",
+        category: "Live Music",
+        dateISO: "2026-11-21",
+        dateStr: "Sat 21 Nov • 19:00",
+        price: 25.00,
+        fee: 0.50,
+        desc: "Brighton duo bring their autumn tour to a climax at Barrowland Ballroom.",
+        image: "https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?auto=format&fit=crop&w=800&q=80"
+      },
+      {
+        id: "11",
+        title: "New Scottish Playwriting",
+        venue: "Tron Theatre",
+        neighborhood: "Merchant City",
+        category: "Theatre",
+        dateISO: "2026-11-22",
+        dateStr: "Sun 22 Nov • 19:00",
+        price: 16.00,
+        fee: 0.50,
+        desc: "Contemporary Scottish stage writing performed live at Tron Theatre.",
+        image: "https://images.unsplash.com/photo-1460723237483-7a6dc9d0b212?auto=format&fit=crop&w=800&q=80"
+      },
+      {
+        id: "12",
+        title: "Synth Audio Workshop",
+        venue: "SWG3 Studio",
+        neighborhood: "West End",
+        category: "Workshops",
+        dateISO: "2026-11-25",
+        dateStr: "Wed 25 Nov • 18:30",
+        price: 18.00,
+        fee: 0.50,
+        desc: "Hands-on synth audio production and sound design workshop.",
+        image: "https://images.unsplash.com/photo-1598488035139-bdbb2231ce04?auto=format&fit=crop&w=800&q=80"
+      },
+      {
+        id: "13",
+        title: "Fright Years live at King Tut's",
+        venue: "King Tut's Wah Wah Hut",
+        neighborhood: "City Centre",
+        category: "Live Music",
+        dateISO: "2026-11-28",
+        dateStr: "Sat 28 Nov • 19:30",
+        price: 10.00,
+        fee: 0.50,
+        desc: "Edinburgh four-piece bring guitar-driven indie rock to King Tut's.",
+        image: "https://images.unsplash.com/photo-1501386761578-eac5c94b800a?auto=format&fit=crop&w=800&q=80"
+      },
+      {
+        id: "14",
+        title: "Royal Blood — Dead Company Tour",
+        venue: "Barrowland Ballroom",
+        neighborhood: "East End",
+     
