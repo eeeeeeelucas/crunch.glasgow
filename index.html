@@ -3,7 +3,8 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>CRUNCH GLASGOW // Gigs & Nightlife Guide</title>
+  <title>CRUNCH GLASGOW</title>
+  <!-- Tailwind CSS CDN -->
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
     tailwind.config = {
@@ -12,11 +13,11 @@
         extend: {
           colors: {
             crunch: {
-              bg: '#050b14',
-              card: '#0d192b',
-              border: '#1a2e4a',
-              yellow: '#FACC15',
-              accent: '#ff2a6d'
+              bg: '#050b14', // Deep slate background
+              card: '#0a1424', // Card background
+              border: '#162844', // Slate-blue pixel border
+              accent: '#ff2a6d', // High-contrast pink
+              yellow: '#FACC15'
             }
           }
         }
@@ -24,36 +25,30 @@
     }
   </script>
   <style>
-    body { background-color: #050b14; color: #F9FAFB; font-family: system-ui, -apple-system, sans-serif; padding-bottom: 75px; }
-    .pixel-border { border: 1px solid #1a2e4a; box-shadow: inset 0 0 0 1px #0d192b; }
+    body { background-color: #050b14; color: #F9FAFB; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; padding-bottom: 75px; }
+    /* Pixel border style inspired by reference image */
+    .pixel-border { border: 1px solid #162844; box-shadow: inset 0 0 0 1px #0a1424; }
     .pixel-border:hover { border-color: #ff2a6d; }
     .no-scrollbar::-webkit-scrollbar { display: none; }
     .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
   </style>
 </head>
-<body class="min-h-screen flex flex-col antialiased selection:bg-crunch-accent/30 selection:text-white">
+<body class="min-h-screen flex flex-col items-center p-4 antialiased">
 
-  <!-- TOP HEADER -->
-  <header class="border-b border-crunch-border bg-crunch-bg sticky top-0 z-40 px-4 py-3">
-    <div class="max-w-md mx-auto flex items-center justify-between">
-      <div class="flex items-center gap-2 cursor-pointer" onclick="navigateTo('home')">
-        <div class="h-8 w-8 rounded bg-crunch-yellow text-black font-black flex items-center justify-center text-lg tracking-tighter">
-          C!
-        </div>
-        <div>
-          <h1 class="text-base font-black tracking-tight text-gray-100 leading-none">
-            CRUNCH <span class="text-crunch-yellow font-light">GLASGOW</span>
-          </h1>
-          <p class="text-[9px] font-mono text-gray-400 uppercase tracking-widest mt-0.5">Glasgow Event listings</p>
-        </div>
+  <!-- VIEW 1: HOMEPAGE / GIG FEED -->
+  <main id="view-home" class="w-full max-w-md space-y-3 flex-1 flex flex-col">
+    
+    <!-- TOP APP HEADER -->
+    <header class="flex items-center justify-between px-1">
+      <div class="flex items-center gap-2 cursor-pointer" onclick="resetView()">
+        <span class="text-xs font-mono tracking-widest text-gray-500 uppercase">CRUNCH.GLASGOW</span>
       </div>
-      <button onclick="toggleModal('add-event-modal')" class="text-[10px] uppercase font-bold text-gray-400 hover:text-white px-2.5 py-1 pixel-border rounded bg-crunch-card transition-colors">
-        + List Your Event
+      <button onclick="toggleModal('add-event-modal')" class="text-[10px] font-mono text-gray-400 hover:text-white px-2.5 py-1 pixel-border rounded bg-crunch-card">
+        + SUBMIT
       </button>
-    </div>
-  </header>
+    </header>
 
-  <!-- CATEGORY FILTER BAR (STICKY BELOW HEADER) -->
-  <div class="border-b border-crunch-border bg-crunch-bg sticky top-[53px] z-30 px-4 py-2">
-    <div class="max-w-md mx
-      
+    <!-- CATEGORY FILTER BAR (STICKY BELOW HEADER) -->
+    <div class="border-b border-crunch-border bg-crunch-bg sticky top-[45px] z-30 py-2">
+      <div class="flex items-center gap-2 overflow-x-
+        
