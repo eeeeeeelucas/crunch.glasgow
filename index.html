@@ -3,8 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>CRUNCH GLASGOW</title>
-  <!-- Tailwind CSS CDN -->
+  <title>CRUNCH GLASGOW — Gigs & Nightlife Guide</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
     tailwind.config = {
@@ -14,10 +13,10 @@
           colors: {
             crunch: {
               bg: '#050b14',
-              card: '#0a1424',
-              border: '#162844',
-              accent: '#ff2a6d',
-              yellow: '#FACC15'
+              card: '#0d192b',
+              border: '#1a2e4a',
+              yellow: '#FACC15',
+              accent: '#ff2a6d'
             }
           }
         }
@@ -25,105 +24,63 @@
     }
   </script>
   <style>
-    body { background-color: #050b14; color: #F9FAFB; font-family: system-ui, -apple-system, sans-serif; }
-    .pixel-border { border: 1px solid #162844; box-shadow: inset 0 0 0 1px #0a1424; }
-    .pixel-border:hover { border-color: #ff2a6d; }
+    body { background-color: #050b14; color: #F9FAFB; font-family: system-ui, -apple-system, sans-serif; padding-bottom: 70px; }
+    .no-scrollbar::-webkit-scrollbar { display: none; }
+    .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
   </style>
 </head>
-<body class="min-h-screen flex flex-col items-center justify-between p-4 sm:p-6 antialiased">
+<body class="min-h-screen flex flex-col antialiased">
 
-  <!-- TOP HEADER -->
-  <header class="w-full max-w-md flex items-center justify-between mb-6 px-1">
-    <div class="flex items-center gap-2 cursor-pointer" onclick="resetView()">
-      <span class="text-xs font-mono text-gray-500 tracking-widest uppercase">CRUNCH.GLASGOW</span>
-    </div>
-    <div class="flex items-center gap-2">
-      <button onclick="toggleModal('add-event-modal')" class="text-xs font-mono text-gray-400 hover:text-white px-2.5 py-1 pixel-border rounded bg-crunch-card">
-        + SUBMIT
+  <!-- TOP APP HEADER -->
+  <header class="border-b border-crunch-border bg-crunch-bg/95 backdrop-blur sticky top-0 z-40 px-4 py-3">
+    <div class="max-w-2xl mx-auto flex items-center justify-between">
+      <div class="flex items-center gap-2 cursor-pointer" onclick="navigateTo('home')">
+        <div class="h-8 w-8 rounded bg-crunch-yellow text-black font-black flex items-center justify-center text-lg tracking-tighter">
+          C!
+        </div>
+        <div>
+          <h1 class="text-base font-black tracking-tight text-gray-100 leading-none">
+            CRUNCH <span class="text-crunch-yellow font-light">GLASGOW</span>
+          </h1>
+          <p class="text-[9px] font-mono text-gray-400 uppercase tracking-widest mt-0.5">Glasgow Event listings</p>
+        </div>
+      </div>
+      <button onclick="toggleModal('add-event-modal')" class="bg-crunch-yellow hover:bg-yellow-300 text-black text-xs font-bold px-3 py-1.5 rounded transition-colors flex items-center gap-1">
+        <span>+ List Event</span>
       </button>
     </div>
   </header>
 
-  <!-- MAIN DASHBOARD CONTAINER -->
-  <main class="w-full max-w-md space-y-3 flex-1 flex flex-col justify-center">
-
-    <!-- SECTION TITLE -->
-    <div class="text-[10px] font-mono tracking-widest text-gray-500 uppercase px-1">
-      // NAVIGATION
-    </div>
-
-    <!-- GRID MENU -->
-    <div class="grid grid-cols-2 gap-3">
-      <!-- UPCOMING / ALL EVENTS -->
-      <button onclick="openFeed('all')" class="pixel-border bg-crunch-card p-5 text-left rounded transition-all group flex flex-col justify-between h-28">
-        <span class="text-crunch-accent font-mono text-lg">↓</span>
-        <div>
-          <h2 class="text-xs font-mono font-bold tracking-wider text-gray-100 group-hover:text-crunch-accent transition-colors">ALL EVENTS</h2>
-          <p class="text-[10px] font-mono text-gray-500 mt-0.5">Glasgow listings</p>
-        </div>
+  <!-- CATEGORY FILTER BAR (STICKY BELOW HEADER) -->
+  <div class="border-b border-crunch-border bg-crunch-bg/90 backdrop-blur sticky top-[53px] z-30 px-4 py-2.5">
+    <div class="max-w-2xl mx-auto flex items-center gap-2 overflow-x-auto no-scrollbar" id="category-bar">
+      <button onclick="setCategory('All')" class="cat-btn active border border-crunch-yellow bg-crunch-yellow text-black text-xs font-bold px-3 py-1 rounded-full whitespace-nowrap transition-all">
+        All Events
       </button>
-
-      <!-- CLUB NIGHTS -->
-      <button onclick="openFeed('Club Night')" class="pixel-border bg-crunch-card p-5 text-left rounded transition-all group flex flex-col justify-between h-28">
-        <span class="text-crunch-accent font-mono text-lg">⚡</span>
-        <div>
-          <h2 class="text-xs font-mono font-bold tracking-wider text-gray-100 group-hover:text-crunch-accent transition-colors">CLUB NIGHTS</h2>
-          <p class="text-[10px] font-mono text-gray-500 mt-0.5">DJs & electronic</p>
-        </div>
+      <button onclick="setCategory('Live Music')" class="cat-btn border border-crunch-border bg-crunch-card text-gray-300 hover:text-white text-xs font-medium px-3 py-1 rounded-full whitespace-nowrap transition-all">
+        🎸 Live Music
       </button>
-
-      <!-- LIVE MUSIC -->
-      <button onclick="openFeed('Live Music')" class="pixel-border bg-crunch-card p-5 text-left rounded transition-all group flex flex-col justify-between h-28">
-        <span class="text-crunch-accent font-mono text-lg">🎸</span>
-        <div>
-          <h2 class="text-xs font-mono font-bold tracking-wider text-gray-100 group-hover:text-crunch-accent transition-colors">LIVE MUSIC</h2>
-          <p class="text-[10px] font-mono text-gray-500 mt-0.5">Gigs & bands</p>
-        </div>
+      <button onclick="setCategory('Clubs')" class="cat-btn border border-crunch-border bg-crunch-card text-gray-300 hover:text-white text-xs font-medium px-3 py-1 rounded-full whitespace-nowrap transition-all">
+        ⚡ Clubs
       </button>
-
-      <!-- DIY / UNDERGROUND -->
-      <button onclick="openFeed('DIY / Underground')" class="pixel-border bg-crunch-card p-5 text-left rounded transition-all group flex flex-col justify-between h-28">
-        <span class="text-crunch-accent font-mono text-lg">🏴󠁧󠁢󠁳󠁣󠁴󠁿</span>
-        <div>
-          <h2 class="text-xs font-mono font-bold tracking-wider text-gray-100 group-hover:text-crunch-accent transition-colors">DIY / UNDERGROUND</h2>
-          <p class="text-[10px] font-mono text-gray-500 mt-0.5">Basements & punk</p>
-        </div>
+      <button onclick="setCategory('Theatre')" class="cat-btn border border-crunch-border bg-crunch-card text-gray-300 hover:text-white text-xs font-medium px-3 py-1 rounded-full whitespace-nowrap transition-all">
+        🎭 Theatre
+      </button>
+      <button onclick="setCategory('Stand-Up Comedy')" class="cat-btn border border-crunch-border bg-crunch-card text-gray-300 hover:text-white text-xs font-medium px-3 py-1 rounded-full whitespace-nowrap transition-all">
+        🎤 Stand-Up Comedy
+      </button>
+      <button onclick="setCategory('Workshops')" class="cat-btn border border-crunch-border bg-crunch-card text-gray-300 hover:text-white text-xs font-medium px-3 py-1 rounded-full whitespace-nowrap transition-all">
+        🎨 Workshops
       </button>
     </div>
+  </div>
 
-    <!-- FULL WIDTH BOTTOM ACTION -->
-    <button onclick="toggleModal('add-event-modal')" class="w-full pixel-border bg-crunch-card p-4 rounded text-left flex items-center justify-between group">
-      <div class="flex items-center gap-3">
-        <span class="text-crunch-accent font-mono text-lg">＋</span>
-        <div>
-          <h2 class="text-xs font-mono font-bold tracking-wider text-gray-100 group-hover:text-crunch-accent transition-colors">LIST AN EVENT</h2>
-          <p class="text-[10px] font-mono text-gray-500">Promoters & venues submission</p>
-        </div>
-      </div>
-      <span class="text-crunch-accent font-mono text-sm">↗</span>
-    </button>
+  <!-- VIEW 1: HOMEPAGE / LISTINGS -->
+  <main id="view-home" class="flex-1 max-w-2xl w-full mx-auto px-4 py-4 space-y-4">
+    <!-- Search Bar -->
+    <div class="relative">
+      <input type="text" id="search-input" onkeyup="renderFeed()" placeholder="Search bands, DJs, venues..." class="w-full bg-crunch-card border border-crunch-border rounded-lg px-3.5 py-2 text-xs text-gray-200 placeholder-gray-500 focus:outline-none focus:border-crunch-yellow" />
+    </div>
 
-  </main>
-
-  <!-- FOOTER -->
-  <footer class="w-full max-w-md pt-6 pb-2 text-center text-[10px] font-mono text-gray-600">
-    CRUNCH GLASGOW // 50P FEE MODEL
-  </footer>
-
-  <!-- EVENTS FEED VIEW MODAL / OVERLAY -->
-  <div id="feed-modal" class="fixed inset-0 bg-[#050b14]/95 backdrop-blur-md z-50 hidden flex flex-col p-4 sm:p-6 overflow-y-auto">
-    <div class="max-w-md w-full mx-auto flex-1 flex flex-col">
-      <div class="flex items-center justify-between pb-4 border-b border-crunch-border mb-4">
-        <div>
-          <h2 id="feed-modal-title" class="text-xs font-mono tracking-widest text-crunch-accent uppercase">EVENTS</h2>
-          <p class="text-[10px] font-mono text-gray-500 mt-0.5" id="feed-count">0 items</p>
-        </div>
-        <button onclick="closeFeed()" class="text-xs font-mono text-gray-400 hover:text-white px-3 py-1.5 pixel-border rounded bg-crunch-card">
-          [ESC] CLOSE
-        </button>
-      </div>
-
-      <!-- Search & Date Filter inside Feed -->
-      <div class="space-y-2 mb-4">
-        <input type="text" id="feed-search" onkeyup="renderFeedEvents()" placeholder="Search title, venue..." class="w-full bg-crunch-card pixel-border rounded px-3 py-2 text-xs font-mono text-gray-200 focus:outline-none focus:border-crunch-accent" />
-        <input
+    <!-- Active Filter Status Indicator -->
+    <div class="flex items-center justify-between text-xs text-gray-400 font-
