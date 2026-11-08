@@ -1,404 +1,406 @@
-<!DOCTYPE html>
-<html lang="en" class="dark">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>CRUNCH GLASGOW</title>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script>
-    tailwind.config = {
-      darkMode: 'class',
-      theme: {
-        extend: {
-          colors: {
-            crunch: {
-              bg: '#050b14',
-              card: '#0a1424',
-              border: '#162844',
-              accent: '#ff2a6d',
-              yellow: '#FACC15'
-            }
+<!doctype html>
+<html lang="en-GB">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#050b14" />
+    <meta name="description" content="Find upcoming live music, club nights and events across Glasgow." />
+    <title>CRUNCH.GLASGOW — Glasgow events & nightlife</title>
+    <style>
+      :root {
+        color-scheme: dark;
+        --bg: #050b14;
+        --panel: #0a1424;
+        --panel-raised: #0d192b;
+        --border: #1a2d49;
+        --pink: #ff2a6d;
+        --yellow: #facc15;
+        --muted: #929bad;
+        --text: #f4f6fa;
+        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      }
+      * { box-sizing: border-box; }
+      body { margin: 0; min-height: 100vh; padding: 16px 16px 92px; background: #000; color: var(--text); }
+      button, input { font: inherit; }
+      button { color: inherit; }
+      .shell { width: min(100%, 560px); min-height: calc(100vh - 108px); margin: 0 auto; overflow: hidden; border: 1px solid #101a29; border-radius: 30px; background: var(--bg); box-shadow: 0 20px 70px #0008; }
+      .topbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 16px 18px; border-bottom: 1px solid var(--border); }
+      .brand { display: flex; align-items: center; gap: 12px; min-width: 0; }
+      .brand-mark { display: grid; width: 44px; height: 44px; flex: 0 0 auto; place-items: center; border-radius: 11px; background: var(--pink); color: #05070b; font-size: 20px; font-weight: 900; box-shadow: 0 0 24px #ff2a6d4d; }
+      .brand-name { margin: 0; font-size: 15px; font-weight: 800; letter-spacing: .12em; white-space: nowrap; }
+      .brand-name span { color: var(--pink); }
+      .brand-subtitle { margin: 4px 0 0; color: #a0a8b6; font-size: 10px; letter-spacing: .12em; }
+      .submit { flex: 0 0 auto; padding: 10px 12px; border: 1px solid var(--border); border-radius: 8px; background: var(--panel); color: var(--text); font-size: 11px; font-weight: 800; cursor: pointer; }
+      .submit:hover, .submit:focus-visible { border-color: var(--pink); outline: none; }
+      .category-wrap { position: sticky; top: 0; z-index: 2; padding: 10px 18px; border-bottom: 1px solid var(--border); background: #050b14f2; }
+      .categories { display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none; }
+      .categories::-webkit-scrollbar { display: none; }
+      .category { flex: 0 0 auto; padding: 9px 13px; border: 1px solid var(--border); border-radius: 8px; background: var(--panel); color: #a7b0c0; font-size: 11px; font-weight: 800; text-transform: uppercase; white-space: nowrap; cursor: pointer; }
+      .category[aria-pressed="true"] { border-color: var(--pink); background: var(--pink); color: #080b11; }
+      .feed { padding: 18px; }
+      .search { display: flex; align-items: center; gap: 10px; padding: 0 12px; border: 1px solid var(--border); border-radius: 8px; background: var(--panel); }
+      .search span { color: var(--muted); font-size: 18px; }
+      .search input { width: 100%; min-width: 0; padding: 14px 0; border: 0; outline: 0; background: transparent; color: var(--text); font-size: 13px; }
+      .search input::placeholder { color: #5f6a7c; }
+      .feed-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 18px 0 14px; color: #929bad; font-size: 11px; font-weight: 800; letter-spacing: .09em; }
+      .feed-heading strong { color: var(--yellow); font-size: 12px; white-space: nowrap; }
+      .feed-state { margin: 12px 0; padding: 14px; border: 1px solid var(--border); border-radius: 8px; background: var(--panel); color: #b8c0cd; font-size: 12px; line-height: 1.6; }
+      .feed-state[hidden] { display: none; }
+      .retry { margin-left: 8px; padding: 3px 8px; border: 1px solid var(--border); border-radius: 5px; background: transparent; color: var(--pink); cursor: pointer; }
+      .event-list { display: grid; gap: 18px; }
+      .event-card { overflow: hidden; border: 1px solid var(--border); border-radius: 9px; background: var(--panel); }
+      .event-art { position: relative; height: 210px; overflow: hidden; background: #101d30; }
+      .event-art img { width: 100%; height: 100%; object-fit: cover; }
+      .event-art::after { position: absolute; inset: 45% 0 0; background: linear-gradient(transparent, #0005); content: ""; pointer-events: none; }
+      .badge { position: absolute; z-index: 1; top: 12px; padding: 7px 9px; border: 1px solid var(--border); border-radius: 6px; background: #050b14e8; font-size: 10px; }
+      .badge-category { left: 12px; color: var(--pink); font-weight: 800; text-transform: uppercase; }
+      .badge-area { right: 12px; color: #e2e7ee; }
+      .event-body { padding: 15px; }
+      .event-date { margin: 0 0 8px; color: var(--pink); font-size: 12px; font-weight: 800; }
+      .event-title { margin: 0 0 8px; font-size: 19px; line-height: 1.3; letter-spacing: .01em; }
+      .event-venue { margin: 0 0 9px; color: #a4adbb; font-size: 13px; }
+      .event-description { margin: 0; color: #818b9b; font-size: 12px; line-height: 1.6; }
+      .event-footer { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 15px; border-top: 1px solid var(--border); }
+      .event-source { color: #8993a3; font-size: 10px; }
+      .ticket-link { display: inline-flex; align-items: center; justify-content: center; min-width: 112px; padding: 9px 12px; border: 1px solid var(--pink); border-radius: 6px; background: var(--pink); color: #080b11; font-size: 12px; font-weight: 900; text-decoration: none; text-transform: uppercase; }
+      .ticket-link:hover, .ticket-link:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
+      .load-more { display: block; width: 100%; margin-top: 16px; padding: 12px; border: 1px solid var(--border); border-radius: 7px; background: var(--panel); color: var(--pink); font-size: 11px; font-weight: 800; cursor: pointer; }
+      .load-more:hover, .load-more:focus-visible { border-color: var(--pink); outline: none; }
+      .load-more[hidden] { display: none; }
+      .feed-note { margin: 18px 0 2px; color: #626e80; font-size: 10px; line-height: 1.6; text-align: center; }
+      .calendar-view { padding: 18px; }
+      .calendar-view[hidden] { display: none; }
+      .calendar-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+      .calendar-head h2 { margin: 0; color: var(--pink); font-size: 13px; letter-spacing: .08em; }
+      .calendar-month { color: #a7b0c0; font-size: 11px; }
+      .calendar-grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 5px; }
+      .weekday, .day { display: grid; min-height: 37px; place-items: center; border-radius: 6px; font-size: 11px; }
+      .weekday { color: #7f8999; font-weight: 800; }
+      .day { border: 1px solid transparent; background: var(--panel); cursor: pointer; }
+      .day:disabled { background: transparent; cursor: default; }
+      .day.has-events { border-color: #50304a; color: var(--pink); }
+      .day[aria-pressed="true"] { border-color: var(--pink); background: var(--pink); color: #080b11; }
+      .date-clear { margin-top: 14px; padding: 8px 10px; border: 1px solid var(--border); border-radius: 6px; background: transparent; color: #cbd2dd; font-size: 11px; cursor: pointer; }
+      .bottom-nav { position: fixed; z-index: 3; right: 16px; bottom: 0; left: 16px; display: flex; justify-content: center; border-top: 1px solid var(--border); background: #050b14f2; backdrop-filter: blur(10px); }
+      .bottom-nav-inner { display: flex; width: min(100%, 560px); justify-content: space-evenly; padding: 10px 0 max(10px, env(safe-area-inset-bottom)); }
+      .nav-button { display: grid; gap: 4px; justify-items: center; padding: 2px 20px; border: 0; background: transparent; color: #7f8999; font-size: 10px; letter-spacing: .08em; cursor: pointer; }
+      .nav-button[aria-current="page"] { color: var(--pink); }
+      .nav-icon { font-size: 21px; line-height: 1; }
+      @media (min-width: 620px) {
+        body { padding-top: 24px; }
+        .shell { min-height: calc(100vh - 140px); }
+        .event-art { height: 260px; }
+      }
+      @media (max-width: 380px) {
+        body { padding: 8px 8px 84px; }
+        .shell { border-radius: 22px; }
+        .topbar, .feed, .calendar-view { padding-right: 12px; padding-left: 12px; }
+        .category-wrap { padding-right: 12px; padding-left: 12px; }
+        .event-art { height: 185px; }
+        .event-title { font-size: 17px; }
+        .bottom-nav { right: 8px; left: 8px; }
+      }
+      @media (prefers-reduced-motion: no-preference) {
+        .event-card { animation: appear .25s ease-out both; }
+        @keyframes appear { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="shell">
+      <header class="topbar">
+        <div class="brand">
+          <span class="brand-mark" aria-hidden="true">C!</span>
+          <div>
+            <p class="brand-name">CRUNCH<span>.GLASGOW</span></p>
+            <p class="brand-subtitle">GLASGOW EVENT &amp; NIGHTLIFE</p>
+          </div>
+        </div>
+        <button class="submit" id="refresh-button" type="button">↻ REFRESH</button>
+      </header>
+
+      <nav class="category-wrap" aria-label="Filter events by category">
+        <div class="categories" id="category-bar">
+          <button class="category" type="button" data-category="All" aria-pressed="true">All</button>
+          <button class="category" type="button" data-category="Live Music" aria-pressed="false">♫ Live Music</button>
+          <button class="category" type="button" data-category="Clubs" aria-pressed="false">Clubs</button>
+          <button class="category" type="button" data-category="Theatre" aria-pressed="false">Theatre</button>
+          <button class="category" type="button" data-category="Comedy" aria-pressed="false">Comedy</button>
+          <button class="category" type="button" data-category="Workshops" aria-pressed="false">Workshops</button>
+        </div>
+      </nav>
+
+      <section class="feed" id="home-view" aria-label="Upcoming Glasgow events">
+        <label class="search">
+          <span aria-hidden="true">⌕</span>
+          <span class="sr-only" hidden>Search events</span>
+          <input id="search-input" type="search" aria-label="Search band, venue, or area" placeholder="// Search band, venue, area..." autocomplete="off" />
+        </label>
+        <div class="feed-heading">
+          <span id="feed-heading">// UPCOMING GLASGOW LISTINGS</span>
+          <strong id="event-count">LOADING</strong>
+        </div>
+        <p class="feed-state" id="feed-state" role="status" aria-live="polite">Loading live event listings…</p>
+        <div class="event-list" id="events-grid" aria-live="polite"></div>
+        <button class="load-more" id="load-more" type="button" hidden>SHOW MORE EVENTS</button>
+        <p class="feed-note">Live listings fetched from official venue pages. Feed refreshes every 15 minutes.</p>
+      </section>
+
+      <section class="calendar-view" id="calendar-view" aria-label="Event calendar" hidden>
+        <div class="calendar-head">
+          <h2>// PICK A DATE</h2>
+          <span class="calendar-month" id="calendar-month"></span>
+        </div>
+        <div class="calendar-grid" id="calendar-grid"></div>
+        <button class="date-clear" id="clear-date" type="button">CLEAR DATE FILTER</button>
+      </section>
+    </main>
+
+    <nav class="bottom-nav" aria-label="Main navigation">
+      <div class="bottom-nav-inner">
+        <button class="nav-button" id="nav-home" type="button" aria-current="page">
+          <span class="nav-icon" aria-hidden="true">⌂</span><span>HOME</span>
+        </button>
+        <button class="nav-button" id="nav-calendar" type="button">
+          <span class="nav-icon" aria-hidden="true">▦</span><span>CALENDAR</span>
+        </button>
+      </div>
+    </nav>
+
+    <script>
+      const eventsGrid = document.getElementById('events-grid');
+      const feedState = document.getElementById('feed-state');
+      const eventCount = document.getElementById('event-count');
+      const searchInput = document.getElementById('search-input');
+      const categoryButtons = [...document.querySelectorAll('[data-category]')];
+      const loadMoreButton = document.getElementById('load-more');
+      const pageSize = 24;
+      const today = new Date();
+      let visibleLimit = pageSize;
+      let events = [];
+      let activeCategory = 'All';
+      let selectedDate = '';
+
+      function categoryFor(event) {
+        const text = `${event.category || ''} ${event.title}`.toLowerCase();
+        if (/comedy|stand.?up|comic/.test(text)) return 'Comedy';
+        if (/theatre|theater|play\b|musical/.test(text)) return 'Theatre';
+        if (/workshop|class\b|masterclass/.test(text)) return 'Workshops';
+        if (/club|club night|dj\b|rave|techno|house music|dance night|disco/.test(text)) return 'Clubs';
+        return 'Live Music';
+      }
+
+      function formatDate(dateISO, time) {
+        const [year, month, day] = dateISO.split('-').map(Number);
+        const date = new Date(year, month - 1, day, 12);
+        const label = new Intl.DateTimeFormat('en-GB', { weekday: 'short', day: 'numeric', month: 'short' }).format(date);
+        return time ? `${label} · ${time}` : `${label} · TIME TBC`;
+      }
+
+      function visibleEvents() {
+        const query = searchInput.value.trim().toLowerCase();
+        return events.filter((event) => {
+          const matchesCategory = activeCategory === 'All' || categoryFor(event) === activeCategory;
+          const matchesDate = !selectedDate || event.dateISO === selectedDate;
+          const haystack = `${event.title} ${event.venue} ${event.area || ''} ${event.description || ''}`.toLowerCase();
+          return matchesCategory && matchesDate && (!query || haystack.includes(query));
+        });
+      }
+
+      function renderEvents() {
+        const filtered = visibleEvents();
+        eventCount.textContent = `${filtered.length} ${filtered.length === 1 ? 'ITEM' : 'ITEMS'}`;
+        eventsGrid.replaceChildren();
+
+        if (!filtered.length) {
+          loadMoreButton.hidden = true;
+          feedState.hidden = false;
+          feedState.textContent = selectedDate ? 'No events found for this date.' : 'No upcoming events match those filters.';
+          return;
+        }
+
+        feedState.hidden = true;
+        const visibleCards = filtered.slice(0, visibleLimit);
+        loadMoreButton.hidden = filtered.length <= visibleLimit;
+        loadMoreButton.textContent = `SHOW MORE EVENTS · ${filtered.length - visibleCards.length} REMAINING`;
+        visibleCards.forEach((event) => {
+          const card = document.createElement('article');
+          card.className = 'event-card';
+
+          const artwork = document.createElement('div');
+          artwork.className = 'event-art';
+          if (event.image) {
+            const image = document.createElement('img');
+            image.src = event.image;
+            image.alt = `${event.title} at ${event.venue}`;
+            image.loading = 'lazy';
+            image.decoding = 'async';
+            artwork.append(image);
           }
+
+          const category = document.createElement('span');
+          category.className = 'badge badge-category';
+          category.textContent = categoryFor(event);
+          const area = document.createElement('span');
+          area.className = 'badge badge-area';
+          area.textContent = event.area || 'Glasgow';
+          artwork.append(category, area);
+
+          const body = document.createElement('div');
+          body.className = 'event-body';
+          const date = document.createElement('p');
+          date.className = 'event-date';
+          date.textContent = formatDate(event.dateISO, event.time);
+          const title = document.createElement('h2');
+          title.className = 'event-title';
+          title.textContent = event.title;
+          const venue = document.createElement('p');
+          venue.className = 'event-venue';
+          venue.textContent = `⌖  ${event.venue}`;
+          const description = document.createElement('p');
+          description.className = 'event-description';
+          description.textContent = event.description || `Official listing from ${event.source}. Check the venue page for event details and availability.`;
+          body.append(date, title, venue, description);
+
+          const footer = document.createElement('div');
+          footer.className = 'event-footer';
+          const source = document.createElement('span');
+          source.className = 'event-source';
+          source.textContent = `SOURCE · ${event.source}`;
+          const link = document.createElement('a');
+          link.className = 'ticket-link';
+          link.href = event.ticketUrl;
+          link.target = '_blank';
+          link.rel = 'noopener noreferrer';
+          link.textContent = 'EVENT INFO';
+          footer.append(source, link);
+          card.append(artwork, body, footer);
+          eventsGrid.append(card);
+        });
+      }
+
+      async function loadEvents() {
+        const refresh = document.getElementById('refresh-button');
+        refresh.disabled = true;
+        refresh.textContent = '↻ LOADING';
+        feedState.hidden = false;
+        feedState.textContent = 'Loading live event listings…';
+        try {
+          const response = await fetch('/api/events', { headers: { Accept: 'application/json' } });
+          const result = await response.json();
+          if (!response.ok) throw new Error(result.error || 'Could not load event listings.');
+          events = Array.isArray(result.events) ? result.events : [];
+          if (!events.length) {
+            eventCount.textContent = '0 ITEMS';
+            feedState.textContent = result.message || 'No upcoming listings were found on the connected venue pages.';
+            eventsGrid.replaceChildren();
+          } else {
+            feedState.hidden = true;
+            renderEvents();
+          }
+        } catch (error) {
+          events = [];
+          eventCount.textContent = '—';
+          eventsGrid.replaceChildren();
+          loadMoreButton.hidden = true;
+          feedState.replaceChildren(document.createTextNode('Live listings are temporarily unavailable. '));
+          const retry = document.createElement('button');
+          retry.className = 'retry';
+          retry.type = 'button';
+          retry.textContent = 'TRY AGAIN';
+          retry.addEventListener('click', loadEvents);
+          feedState.append(retry);
+          feedState.hidden = false;
+          console.error('Unable to load the Glasgow event feed:', error);
+        } finally {
+          refresh.disabled = false;
+          refresh.textContent = '↻ REFRESH';
         }
       }
-    }
-  </script>
-  <style>
-    body { background-color: #050b14; color: #F9FAFB; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; padding-bottom: 75px; }
-    .pixel-border { border: 1px solid #162844; box-shadow: inset 0 0 0 1px #0a1424; }
-    .pixel-border:hover { border-color: #ff2a6d; }
-    .no-scrollbar::-webkit-scrollbar { display: none; }
-    .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-  </style>
-</head>
-<body class="min-h-screen flex flex-col items-center p-4 antialiased">
 
-  <!-- VIEW 1: HOMEPAGE / GIG FEED -->
-  <main id="view-home" class="w-full max-w-md space-y-3 flex-1 flex flex-col">
-    
-    <!-- TOP APP HEADER -->
-    <header class="flex items-center justify-between px-1">
-      <div class="flex items-center gap-2 cursor-pointer" onclick="resetView()">
-        <span class="text-xs font-mono tracking-widest text-gray-500 uppercase">CRUNCH.GLASGOW</span>
-      </div>
-      <button onclick="toggleModal('add-event-modal')" class="text-[10px] font-mono text-gray-400 hover:text-white px-2.5 py-1 pixel-border rounded bg-crunch-card">
-        + SUBMIT
-      </button>
-    </header>
-
-    <!-- CATEGORY FILTER BAR -->
-    <div class="border-b border-crunch-border bg-crunch-bg sticky top-[45px] z-30 py-2">
-      <div class="flex items-center gap-2 overflow-x-auto no-scrollbar" id="category-bar">
-        <button onclick="setCategory('All')" id="cat-btn-All" class="px-3 py-1 text-[10px] uppercase font-bold rounded pixel-border bg-crunch-accent text-black border-crunch-accent whitespace-nowrap">
-          All Events
-        </button>
-        <button onclick="setCategory('Live Music')" id="cat-btn-Live Music" class="px-3 py-1 text-[10px] uppercase font-bold rounded pixel-border bg-crunch-card text-gray-400 hover:text-white whitespace-nowrap">
-          🎸 Live Music
-        </button>
-        <button onclick="setCategory('Clubs')" id="cat-btn-Clubs" class="px-3 py-1 text-[10px] uppercase font-bold rounded pixel-border bg-crunch-card text-gray-400 hover:text-white whitespace-nowrap">
-          ⚡ Clubs
-        </button>
-        <button onclick="setCategory('Theatre')" id="cat-btn-Theatre" class="px-3 py-1 text-[10px] uppercase font-bold rounded pixel-border bg-crunch-card text-gray-400 hover:text-white whitespace-nowrap">
-          🎭 Theatre
-        </button>
-        <button onclick="setCategory('Comedy')" id="cat-btn-Comedy" class="px-3 py-1 text-[10px] uppercase font-bold rounded pixel-border bg-crunch-card text-gray-400 hover:text-white whitespace-nowrap">
-          🎤 Stand-Up
-        </button>
-        <button onclick="setCategory('Workshops')" id="cat-btn-Workshops" class="px-3 py-1 text-[10px] uppercase font-bold rounded pixel-border bg-crunch-card text-gray-400 hover:text-white whitespace-nowrap">
-          🎨 Workshops
-        </button>
-      </div>
-    </div>
-
-    <!-- FEED BODY -->
-    <div class="space-y-3 flex-1">
-      <input type="text" id="search-input" onkeyup="renderFeed()" placeholder="// Search band, venue..." class="w-full bg-crunch-card pixel-border rounded px-3 py-1.5 text-xs text-gray-200 placeholder-gray-600 focus:outline-none focus:border-crunch-accent" />
-
-      <div class="flex items-center justify-between text-[10px] text-gray-500 uppercase px-1">
-        <span id="filter-status-label">// UPCOMING LISTINGS</span>
-        <span id="event-count-badge">0 ITEMS</span>
-      </div>
-
-      <div id="active-date-pill" class="hidden flex items-center justify-between bg-crunch-card pixel-border rounded px-3 py-1.5 text-xs">
-        <span class="text-crunch-accent text-[10px]" id="active-date-text">Filtered by date</span>
-        <button onclick="clearDateFilter()" class="text-gray-400 hover:text-white text-[10px]">[✕ CLEAR DATE]</button>
-      </div>
-
-      <div id="events-grid" class="space-y-3 pb-6">
-        <!-- Injected Cards -->
-      </div>
-    </div>
-  </main>
-
-  <!-- VIEW 2: CALENDAR PAGE -->
-  <main id="view-calendar" class="hidden w-full max-w-md space-y-3 flex-1 flex flex-col justify-center">
-    <header class="flex items-center justify-between px-1">
-      <div class="flex items-center gap-2 cursor-pointer" onclick="resetView()">
-        <span class="text-xs font-mono tracking-widest text-gray-500 uppercase">CRUNCH.GLASGOW</span>
-      </div>
-    </header>
-
-    <div class="pixel-border bg-crunch-card p-4 rounded space-y-4">
-      <div class="flex items-center justify-between mb-3 border-b border-crunch-border pb-2">
-        <h2 class="text-xs font-mono uppercase text-crunch-accent font-bold tracking-widest">// CALENDAR NAVIGATION</h2>
-        <span class="text-xs font-mono text-gray-400">NOVEMBER 2026</span>
-      </div>
-
-      <div class="grid grid-cols-7 gap-1 text-center font-mono text-[10px] text-gray-500 mb-2 font-bold uppercase">
-        <div>M</div><div>T</div><div>W</div><div>T</div><div>F</div><div>S</div><div>S</div>
-      </div>
-      <div class="grid grid-cols-7 gap-1 text-center font-mono text-xs" id="calendar-days"></div>
-    </div>
-
-    <div class="pixel-border bg-crunch-card p-3 rounded flex items-center justify-between text-xs">
-      <label class="text-[10px] text-gray-400 font-mono uppercase tracking-wider">Custom Date Picker:</label>
-      <input type="date" id="calendar-date-picker" onchange="selectDateFromPicker(this.value)" class="bg-crunch-bg pixel-border rounded px-2 py-1 text-xs text-gray-200 focus:outline-none focus:border-crunch-accent" />
-    </div>
-  </main>
-
-  <!-- PROMOTER EVENT SUBMISSION MODAL -->
-  <div id="add-event-modal" class="fixed inset-0 bg-black/90 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
-    <div class="bg-crunch-card pixel-border rounded max-w-md w-full p-4 relative font-mono max-h-[90vh] overflow-y-auto text-xs">
-      <button onclick="toggleModal('add-event-modal')" class="absolute top-2 right-2 text-gray-500 hover:text-white text-xs">[✕]</button>
-      <h3 class="text-xs font-bold text-crunch-accent uppercase tracking-widest mb-1">// SUBMIT LISTING</h3>
-      <p class="text-[10px] text-gray-500 mb-3">Direct submission for Glasgow venues & promoters.</p>
-      
-      <form onsubmit="handleCreateEvent(event)" class="space-y-2">
-        <div>
-          <label class="block text-[10px] text-gray-400 mb-0.5">EVENT TITLE</label>
-          <input type="text" id="new-title" required placeholder="e.g. Subculture" class="w-full bg-crunch-bg pixel-border rounded p-1.5 text-gray-100 focus:border-crunch-accent focus:outline-none"/>
-        </div>
-        <div class="grid grid-cols-2 gap-2">
-          <div>
-            <label class="block text-[10px] text-gray-400 mb-0.5">VENUE</label>
-            <input type="text" id="new-venue" required placeholder="Sub Club" class="w-full bg-crunch-bg pixel-border rounded p-1.5 text-gray-100 focus:border-crunch-accent focus:outline-none"/>
-          </div>
-          <div>
-            <label class="block text-[10px] text-gray-400 mb-0.5">AREA</label>
-            <select id="new-area" class="w-full bg-crunch-bg pixel-border rounded p-1.5 text-gray-100 focus:border-crunch-accent focus:outline-none">
-              <option value="City Centre">City Centre</option>
-              <option value="West End">West End</option>
-              <option value="Southside">Southside</option>
-              <option value="East End">East End</option>
-            </select>
-          </div>
-        </div>
-        <div class="grid grid-cols-2 gap-2">
-          <div>
-            <label class="block text-[10px] text-gray-400 mb-0.5">DATE & TIME</label>
-            <input type="datetime-local" id="new-date" required class="w-full bg-crunch-bg pixel-border rounded p-1.5 text-gray-100 focus:border-crunch-accent focus:outline-none"/>
-          </div>
-          <div>
-            <label class="block text-[10px] text-gray-400 mb-0.5">CATEGORY</label>
-            <select id="new-category" class="w-full bg-crunch-bg pixel-border rounded p-1.5 text-gray-100 focus:border-crunch-accent focus:outline-none">
-              <option value="Live Music">Live Music</option>
-              <option value="Clubs">Clubs</option>
-              <option value="Theatre">Theatre</option>
-              <option value="Comedy">Comedy</option>
-              <option value="Workshops">Workshops</option>
-            </select>
-          </div>
-        </div>
-        <div class="grid grid-cols-2 gap-2">
-          <div>
-            <label class="block text-[10px] text-gray-400 mb-0.5">PRICE (£)</label>
-            <input type="number" step="0.50" id="new-price" required placeholder="10.00" class="w-full bg-crunch-bg pixel-border rounded p-1.5 text-gray-100 focus:border-crunch-accent focus:outline-none"/>
-          </div>
-          <div>
-            <label class="block text-[10px] text-gray-400 mb-0.5">TICKET URL</label>
-            <input type="url" id="new-ticket-url" required placeholder="https://ticketmaster.co.uk..." class="w-full bg-crunch-bg pixel-border rounded p-1.5 text-gray-100 focus:border-crunch-accent focus:outline-none"/>
-          </div>
-        </div>
-        <div>
-          <label class="block text-[10px] text-gray-400 mb-0.5">PHOTO URL</label>
-          <input type="url" id="new-image" placeholder="https://..." class="w-full bg-crunch-bg pixel-border rounded p-1.5 text-gray-100 focus:border-crunch-accent focus:outline-none"/>
-        </div>
-        <div>
-          <label class="block text-[10px] text-gray-400 mb-0.5">DESCRIPTION</label>
-          <textarea id="new-desc" rows="2" required placeholder="Event description..." class="w-full bg-crunch-bg pixel-border rounded p-1.5 text-gray-100 focus:border-crunch-accent focus:outline-none"></textarea>
-        </div>
-        <button type="submit" class="w-full pixel-border bg-crunch-accent text-black font-bold py-2 rounded uppercase tracking-wider hover:opacity-90 mt-1">
-          PUBLISH EVENT
-        </button>
-      </form>
-    </div>
-  </div>
-
-  <!-- FIXED BOTTOM NAVIGATION BAR -->
-  <nav class="fixed bottom-0 left-0 right-0 border-t border-crunch-border bg-crunch-bg/95 backdrop-blur z-40 px-6 py-2.5">
-    <div class="max-w-md mx-auto flex items-center justify-around text-xs font-mono uppercase tracking-widest">
-      <button onclick="navigateTo('home')" id="nav-home" class="flex flex-col items-center gap-1.5 text-crunch-accent font-bold">
-        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 00-1-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>
-        <span>HOME</span>
-      </button>
-      <button onclick="navigateTo('calendar')" id="nav-calendar" class="flex flex-col items-center gap-1.5 text-gray-500 hover:text-white">
-        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
-        <span>CALENDAR</span>
-      </button>
-    </div>
-  </nav>
-
-  <!-- JAVASCRIPT APP LOGIC -->
-  <script>
-    // HARDCODED REAL GLASGOW EVENTS (NOVEMBER 2026) WITH DIRECT TICKET URLS
-    const eventsData = [
-      {
-        id: "1",
-        title: "Subculture w/ Domenic Cappello",
-        venue: "Sub Club",
-        neighborhood: "City Centre",
-        category: "Clubs",
-        dateISO: "2026-11-28",
-        dateStr: "Sat 28 Nov • 23:00",
-        price: 15.00,
-        ticketUrl: "https://ra.co/events/glasgow",
-        desc: "Domenic Cappello takes full command of Sub Club from open to close.",
-        image: "https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?auto=format&fit=crop&w=800&q=80"
-      },
-      {
-        id: "2",
-        title: "King Tut's Presents: Grace Cummings",
-        venue: "King Tut's Wah Wah Hut",
-        neighborhood: "City Centre",
-        category: "Live Music",
-        dateISO: "2026-11-10",
-        dateStr: "Tue 10 Nov • 19:30",
-        price: 15.00,
-        ticketUrl: "https://www.kingtuts.co.uk",
-        desc: "Australian singer-songwriter performs live on St Vincent Street.",
-        image: "https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?auto=format&fit=crop&w=800&q=80"
-      },
-      {
-        id: "3",
-        title: "Barrowlands Presents: Yard Act",
-        venue: "Barrowland Ballroom",
-        neighborhood: "East End",
-        category: "Live Music",
-        dateISO: "2026-11-11",
-        dateStr: "Wed 11 Nov • 19:00",
-        price: 22.00,
-        ticketUrl: "https://www.barrowland-ballroom.co.uk",
-        desc: "Leeds post-punk quartet bring their tour to the iconic Barrowlands.",
-        image: "https://images.unsplash.com/photo-1514525253161-7a46d19cd819?auto=format&fit=crop&w=800&q=80"
-      },
-      {
-        id: "4",
-        title: "Stereo DIY Punk Showcase",
-        venue: "Stereo",
-        neighborhood: "City Centre",
-        category: "Live Music",
-        dateISO: "2026-11-16",
-        dateStr: "Mon 16 Nov • 19:00",
-        price: 7.50,
-        ticketUrl: "https://stereocafebar.co.uk",
-        desc: "Fast-paced underground punk showcase in Stereo's basement.",
-        image: "https://images.unsplash.com/photo-1501386761578-eac5c94b800a?auto=format&fit=crop&w=800&q=80"
-      },
-      {
-        id: "5",
-        title: "Nia Archives // Emotional Junglist",
-        venue: "Barrowland Ballroom",
-        neighborhood: "East End",
-        category: "Clubs",
-        dateISO: "2026-11-22",
-        dateStr: "Sun 22 Nov • 19:30",
-        price: 22.00,
-        ticketUrl: "https://ticketmaster.co.uk",
-        desc: "Jungle icon Nia Archives brings her world tour to Glasgow.",
-        image: "https://images.unsplash.com/photo-1598488035139-bdbb2231ce04?auto=format&fit=crop&w=800&q=80"
-      },
-      {
-        id: "6",
-        title: "Opus Kink at King Tut's",
-        venue: "King Tut's Wah Wah Hut",
-        neighborhood: "City Centre",
-        category: "Live Music",
-        dateISO: "2026-11-19",
-        dateStr: "Thu 19 Nov • 19:30",
-        price: 13.00,
-        ticketUrl: "https://www.kingtuts.co.uk",
-        desc: "Horn-fuelled chaos live at King Tut's.",
-        image: "https://images.unsplash.com/photo-1460723237483-7a6dc9d0b212?auto=format&fit=crop&w=800&q=80"
-      },
-      {
-        id: "7",
-        title: "Optimo (Espacio) Sun Session",
-        venue: "Sub Club",
-        neighborhood: "City Centre",
-        category: "Clubs",
-        dateISO: "2026-11-22",
-        dateStr: "Sun 22 Nov • 22:00",
-        price: 10.00,
-        ticketUrl: "https://ra.co",
-        desc: "Optimo eclectic genre-bending session.",
-        image: "https://images.unsplash.com/photo-1470225620780-dba8ba36b745?auto=format&fit=crop&w=800&q=80"
-      },
-      {
-        id: "8",
-        title: "Glasgow Comedy Night",
-        venue: "The Glee Club",
-        neighborhood: "City Centre",
-        category: "Comedy",
-        dateISO: "2026-11-20",
-        dateStr: "Fri 20 Nov • 20:00",
-        price: 14.00,
-        ticketUrl: "https://glee.co.uk/glasgow",
-        desc: "Top touring UK stand-up comedians and local Glasgow circuit favorites.",
-        image: "https://images.unsplash.com/photo-1585699324551-f6c309eedeca?auto=format&fit=crop&w=800&q=80"
-      },
-      {
-        id: "9",
-        title: "Rizzle Kicks — Headline UK Tour",
-        venue: "Barrowland Ballroom",
-        neighborhood: "East End",
-        category: "Live Music",
-        dateISO: "2026-11-21",
-        dateStr: "Sat 21 Nov • 19:00",
-        price: 25.00,
-        ticketUrl: "https://ticketmaster.co.uk",
-        desc: "Brighton duo bring their autumn tour to Barrowland Ballroom.",
-        image: "https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?auto=format&fit=crop&w=800&q=80"
-      },
-      {
-        id: "10",
-        title: "SWG3 Presents: Synth Workshop",
-        venue: "SWG3",
-        neighborhood: "West End",
-        category: "Workshops",
-        dateISO: "2026-11-25",
-        dateStr: "Wed 25 Nov • 18:30",
-        price: 18.00,
-        ticketUrl: "https://swg3.tv",
-        desc: "Hands-on synth audio production and sound design workshop.",
-        image: "https://images.unsplash.com/photo-1598488035139-bdbb2231ce04?auto=format&fit=crop&w=800&q=80"
-      },
-      {
-        id: "11",
-        title: "Eagles of Death Metal at Barrowlands",
-        venue: "Barrowland Ballroom",
-        neighborhood: "East End",
-        category: "Live Music",
-        dateISO: "2026-11-18",
-        dateStr: "Wed 18 Nov • 19:30",
-        price: 27.50,
-        ticketUrl: "https://ticketmaster.co.uk",
-        desc: "American rockers celebrate 20 years of Death By Sexy live.",
-        image: "https://images.unsplash.com/photo-1498038432885-c6f3f1b912ee?auto=format&fit=crop&w=800&q=80"
-      },
-      {
-        id: "12",
-        title: "Royal Blood — Dead Company Tour",
-        venue: "Barrowland Ballroom",
-        neighborhood: "East End",
-        category: "Live Music",
-        dateISO: "2026-11-28",
-        dateStr: "Sat 28 Nov • 19:30",
-        price: 32.50,
-        ticketUrl: "https://ticketmaster.co.uk",
-        desc: "Hard rock duo headline the Barrowland Ballroom.",
-        image: "https://images.unsplash.com/photo-1470225620780-dba8ba36b745?auto=format&fit=crop&w=800&q=80"
+      function renderCalendar() {
+        const grid = document.getElementById('calendar-grid');
+        const year = today.getFullYear();
+        const month = today.getMonth();
+        document.getElementById('calendar-month').textContent = new Intl.DateTimeFormat('en-GB', { month: 'long', year: 'numeric' }).format(today).toUpperCase();
+        grid.replaceChildren();
+        ['M', 'T', 'W', 'T', 'F', 'S', 'S'].forEach((label) => {
+          const weekday = document.createElement('span');
+          weekday.className = 'weekday';
+          weekday.textContent = label;
+          grid.append(weekday);
+        });
+        const firstDay = (new Date(year, month, 1).getDay() + 6) % 7;
+        const daysInMonth = new Date(year, month + 1, 0).getDate();
+        for (let i = 0; i < firstDay; i += 1) {
+          const blank = document.createElement('span');
+          blank.className = 'day';
+          blank.setAttribute('aria-hidden', 'true');
+          grid.append(blank);
+        }
+        const datesWithEvents = new Set(events.map((event) => event.dateISO));
+        for (let day = 1; day <= daysInMonth; day += 1) {
+          const dateISO = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+          const button = document.createElement('button');
+          button.className = `day${datesWithEvents.has(dateISO) ? ' has-events' : ''}`;
+          button.type = 'button';
+          button.textContent = String(day);
+          button.setAttribute('aria-pressed', String(selectedDate === dateISO));
+          button.setAttribute('aria-label', `${day} ${new Intl.DateTimeFormat('en-GB', { month: 'long' }).format(today)}${datesWithEvents.has(dateISO) ? ', events listed' : ''}`);
+          button.addEventListener('click', () => {
+            selectedDate = selectedDate === dateISO ? '' : dateISO;
+            visibleLimit = pageSize;
+            document.getElementById('home-view').hidden = false;
+            document.getElementById('calendar-view').hidden = true;
+            setActiveNav('home');
+            renderCalendar();
+            renderEvents();
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+          });
+          grid.append(button);
+        }
       }
-    ];
 
-    let activeCategory = 'All';
-    let selectedFilterDate = null;
-
-    function navigateTo(viewName) {
-      const homeView = document.getElementById('view-home');
-      const calendarView = document.getElementById('view-calendar');
-      const navHome = document.getElementById('nav-home');
-      const navCalendar = document.getElementById('nav-calendar');
-
-      if (viewName === 'home') {
-        homeView.classList.remove('hidden');
-        calendarView.classList.add('hidden');
-        navHome.className = 'flex flex-col items-center gap-1.5 text-crunch-accent font-bold';
-        navCalendar.className = 'flex flex-col items-center gap-1.5 text-gray-500 hover:text-white';
-        renderFeed();
-      } else if (viewName === 'calendar') {
-        homeView.classList.add('hidden');
-        calendarView.classList.remove('hidden');
-        navCalendar.className = 'flex flex-col items-center gap-1.5 text-crunch-accent font-bold';
-        navHome.className = 'flex flex-col items-center gap-1.5 text-gray-500 hover:text-white';
-        renderCalendarGrid();
+      function setActiveNav(view) {
+        const home = view === 'home';
+        document.getElementById('home-view').hidden = !home;
+        document.getElementById('calendar-view').hidden = home;
+        document.getElementById('category-bar').parentElement.hidden = !home;
+        if (home) {
+          document.getElementById('nav-home').setAttribute('aria-current', 'page');
+          document.getElementById('nav-calendar').removeAttribute('aria-current');
+        } else {
+          document.getElementById('nav-calendar').setAttribute('aria-current', 'page');
+          document.getElementById('nav-home').removeAttribute('aria-current');
+        }
+        if (!home) renderCalendar();
       }
-    }
 
-    function setCategory(catName) {
-      activeCategory = catName;
-      document.querySelectorAll('#category-bar button').forEach(btn => {
-        btn.className = 'px-3 py-1 text-[10px] uppercase font-bold rounded pixel-border bg-crunch-card text-gray-400 hover:text-white whitespace-nowrap';
+      loadMoreButton.addEventListener('click', () => {
+        visibleLimit += pageSize;
+        renderEvents();
       });
-      const selectedBtn = document.getElementById(`cat-btn-${catName}`);
-      if (selectedBtn) {
-        selectedBtn.className = 'px-3 py-1 text-[10px] uppercase font-bold rounded pixel-border bg-crunch-accent text-black border-crunch-accent whitespace-nowrap';
-      }
-      renderFeed();
-    }
-
-    function renderFeed() {
-      const grid = document.getElementById('events-grid');
-      const countEl = document.getElementById('event-count-badge');
-      const statusLabel = document.getElementById('filter-status-label');
-      const searchVal = document.getElementById('search-input').value.toLowerCase();
-      const activePill = document.getElementById('active-date-pill
+      categoryButtons.forEach((button) => button.addEventListener('click', () => {
+        visibleLimit = pageSize;
+        activeCategory = button.dataset.category;
+        categoryButtons.forEach((candidate) => candidate.setAttribute('aria-pressed', String(candidate === button)));
+        renderEvents();
+      }));
+      searchInput.addEventListener('input', () => {
+        visibleLimit = pageSize;
+        renderEvents();
+      });
+      document.getElementById('refresh-button').addEventListener('click', loadEvents);
+      document.getElementById('nav-home').addEventListener('click', () => setActiveNav('home'));
+      document.getElementById('nav-calendar').addEventListener('click', () => setActiveNav('calendar'));
+      document.getElementById('clear-date').addEventListener('click', () => {
+        selectedDate = '';
+        visibleLimit = pageSize;
+        renderCalendar();
+        setActiveNav('home');
+        renderEvents();
+      });
+      loadEvents();
+    </script>
+  </body>
+</html>
