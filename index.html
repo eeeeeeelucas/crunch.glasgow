@@ -14,6 +14,7 @@
         --panel-raised: #0d192b;
         --border: #1a2d49;
         --pink: #ff2a6d;
+        --lime: #b8ff40;
         --yellow: #facc15;
         --muted: #929bad;
         --text: #f4f6fa;
@@ -42,6 +43,14 @@
       .search span { color: var(--muted); font-size: 18px; }
       .search input { width: 100%; min-width: 0; padding: 14px 0; border: 0; outline: 0; background: transparent; color: var(--text); font-size: 13px; }
       .search input::placeholder { color: #5f6a7c; }
+      .active-filters { display: flex; align-items: flex-start; gap: 8px; margin-top: 12px; }
+      .active-filters[hidden] { display: none; }
+      .filter-caption { flex: 0 0 auto; padding-top: 7px; color: var(--lime); font-size: 9px; font-weight: 800; letter-spacing: .08em; }
+      .filter-chips { display: flex; flex: 1 1 auto; flex-wrap: wrap; gap: 6px; min-width: 0; }
+      .filter-chip { display: inline-flex; align-items: center; gap: 6px; max-width: 100%; min-height: 28px; padding: 4px 6px 4px 9px; border: 1px solid #b8ff4055; border-radius: 6px; background: #b8ff4012; color: #d9f4aa; font-size: 10px; font-weight: 700; line-height: 1.2; }
+      .filter-chip-label { max-width: clamp(100px, 48vw, 240px); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+      .filter-remove { display: grid; width: 18px; height: 18px; flex: 0 0 auto; place-items: center; border: 0; border-radius: 4px; background: transparent; color: var(--lime); font-size: 15px; line-height: 1; cursor: pointer; }
+      .filter-remove:hover, .filter-remove:focus-visible { background: #b8ff4020; outline: 1px solid var(--lime); }
       .feed-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 18px 0 14px; color: #929bad; font-size: 11px; font-weight: 800; letter-spacing: .09em; }
       .feed-heading strong { color: var(--yellow); font-size: 12px; white-space: nowrap; }
       .feed-state { margin: 12px 0; padding: 14px; border: 1px solid var(--border); border-radius: 8px; background: var(--panel); color: #b8c0cd; font-size: 12px; line-height: 1.6; }
@@ -140,6 +149,10 @@
           <span class="sr-only" hidden>Search events</span>
           <input id="search-input" type="search" aria-label="Search band, venue, or area" placeholder="// Search band, venue, area..." autocomplete="off" />
         </label>
+        <div class="active-filters" id="active-filters" role="region" aria-label="Active filters" hidden>
+          <span class="filter-caption">ACTIVE FILTERS</span>
+          <div class="filter-chips" id="filter-chips"></div>
+        </div>
         <div class="feed-heading">
           <span id="feed-heading">// UPCOMING GLASGOW LISTINGS</span>
           <strong id="event-count">LOADING</strong>
@@ -180,6 +193,8 @@
       const feedState = document.getElementById('feed-state');
       const eventCount = document.getElementById('event-count');
       const searchInput = document.getElementById('search-input');
+      const activeFilters = document.getElementById('active-filters');
+      const filterChips = document.getElementById('filter-chips');
       const categoryButtons = [...document.querySelectorAll('[data-category]')];
       const loadMoreButton = document.getElementById('load-more');
       const pageSize = 24;
@@ -218,7 +233,61 @@
         });
       }
 
+      function formatFilterDate(dateISO) {
+        const [year, month, day] = dateISO.split('-');
+        return `${day}/${month}/${year.slice(-2)}`;
+      }
+
+      function appendFilterChip(label, filterName, onRemove) {
+        const chip = document.createElement('span');
+        chip.className = 'filter-chip';
+        const chipLabel = document.createElement('span');
+        chipLabel.className = 'filter-chip-label';
+        chipLabel.textContent = label;
+        const removeButton = document.createElement('button');
+        removeButton.className = 'filter-remove';
+        removeButton.type = 'button';
+        removeButton.setAttribute('aria-label', `Remove ${filterName} filter`);
+        removeButton.textContent = '×';
+        removeButton.addEventListener('click', onRemove);
+        chip.append(chipLabel, removeButton);
+        filterChips.append(chip);
+      }
+
+      function renderActiveFilters() {
+        filterChips.replaceChildren();
+
+        if (activeCategory !== 'All') {
+          const activeButton = categoryButtons.find((button) => button.dataset.category === activeCategory);
+          const label = activeButton?.textContent.trim() || activeCategory;
+          appendFilterChip(label, label, () => {
+            activeCategory = 'All';
+            categoryButtons.forEach((button) => button.setAttribute('aria-pressed', String(button.dataset.category === 'All')));
+            renderEvents();
+          });
+        }
+
+        if (selectedDate) {
+          appendFilterChip(formatFilterDate(selectedDate), 'date', () => {
+            selectedDate = '';
+            renderCalendar();
+            renderEvents();
+          });
+        }
+
+        const query = searchInput.value.trim();
+        if (query) {
+          appendFilterChip(`SEARCH · ${query}`, 'search', () => {
+            searchInput.value = '';
+            renderEvents();
+          });
+        }
+
+        activeFilters.hidden = filterChips.childElementCount === 0;
+      }
+
       function renderEvents() {
+        renderActiveFilters();
         const filtered = visibleEvents();
         eventCount.textContent = `${filtered.length} ${filtered.length === 1 ? 'ITEM' : 'ITEMS'}`;
         eventsGrid.replaceChildren();
