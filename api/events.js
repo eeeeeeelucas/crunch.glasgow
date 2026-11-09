@@ -26,6 +26,42 @@ const VENUES = [
     parse: parseGarage,
   },
   {
+    name: "Sub Club",
+    area: "City Centre",
+    url: "https://subclub.co.uk/",
+    parse: parseSubClub,
+  },
+  {
+    name: "La Cheetah Club",
+    area: "City Centre",
+    url: "https://lacheetahclub.co.uk/",
+    parse: parseLaCheetah,
+  },
+  {
+    name: "Room 2 Club Listings",
+    area: "City Centre",
+    url: "https://room-2.co.uk/club-listings/",
+    parse: (html) => parseRoom2(html, "Clubs"),
+  },
+  {
+    name: "Room 2 Live Listings",
+    area: "City Centre",
+    url: "https://room-2.co.uk/live-listings/",
+    parse: parseRoom2,
+  },
+  {
+    name: "Òran Mór",
+    area: "West End",
+    url: "https://oran-mor.co.uk/whats-on/",
+    parse: parseOranMor,
+  },
+  {
+    name: "Creative Bloc Glasgow",
+    area: "Maryhill",
+    url: "https://www.eventbrite.co.uk/o/creative-bloc-92200878713",
+    parse: parseCreativeBloc,
+  },
+  {
     name: "The Stand Comedy Club",
     area: "Woodlands",
     url: "https://www.thestand.co.uk/whats-on/glasgow",
@@ -645,7 +681,7 @@ function classify(title, details = "", eventType = "") {
   if (/comedy|stand.?up|comedian|comic|laugh-in|red raw/.test(text)) return "Comedy";
   if (/theatre|theater|musical|pantomime|opera|ballet|\bplays?\b/.test(text)) return "Theatre";
   if (/class\b/.test(text)) return "Workshops";
-  if (/club|\bdj\b|rave|techno|house music|dance night|disco/.test(text)) return "Clubs";
+  if (/\bclub\b|\bdj\b|rave|techno|house music|dance night|disco|nightlife|night.?club|reggaeton|drum\s*(?:and|&)\s*bass|\bdnb\b|uk garage|after.?party/.test(text)) return "Clubs";
   return "Live Music";
 }
 
@@ -742,7 +778,7 @@ function parseSwg3(html) {
       title,
       venue,
       area: "Finnieston",
-      category: classify(title),
+      category: /^(?:FLY\b|Sasha\b|SCDD\b|Strictly Bangerz\b|Hardbeat Department\b|WAXXXMAS\b)/i.test(title) ? "Clubs" : classify(title),
       dateISO,
       time,
       description: "",
@@ -755,8 +791,204 @@ function parseSwg3(html) {
   return events;
 }
 
+function parseSubClub(html) {
+  const $ = cheerio.load(html);
+  const events = [];
+  const seen = new Set();
+  const venueUrl = "https://subclub.co.uk/";
+
+  $(".event-grid.full .event-item-link").each((_, element) => {
+    const link = $(element);
+    const text = link.text().replace(/\s+/g, " ").trim();
+    const dateISO = dateFromText(text);
+    const title = text.replace(/^(?:(?:Mon|Tue|Wed|Thu|Fri|Sat|Sun)\s+)?\d{1,2}\s+[A-Za-z]{3,9}(?:,?\s+\d{4})?\s*/i, "").trim();
+    const eventUrl = safeUrl(link.attr("href"), venueUrl);
+    const key = eventUrl || `${dateISO}|${title.toLowerCase()}`;
+    if (!title || !dateISO || !isUpcoming(dateISO) || !eventUrl || seen.has(key)) return;
+    seen.add(key);
+
+    events.push({
+      id: `subclub-${dateISO}-${title.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`,
+      title,
+      venue: "Sub Club",
+      area: "City Centre",
+      category: "Clubs",
+      dateISO,
+      time: text.match(/\b(\d{1,2}:\d{2})\b/)?.[1] || "",
+      description: "",
+      image: imageFrom($, link, venueUrl),
+      ticketUrl: eventUrl,
+      source: "Sub Club",
+    });
+  });
+
+  return events;
+}
+
+function parseLaCheetah(html) {
+  const $ = cheerio.load(html);
+  const events = [];
+  const seen = new Set();
+  const venueUrl = "https://lacheetahclub.co.uk/";
+
+  $(".dem_grid_style2_container").each((_, element) => {
+    const card = $(element);
+    const title = card.find(".dem_grid_title").first().text().replace(/\s+/g, " ").trim();
+    const details = card.find(".dem_grid_style2_event_date_time_venue").first().text().replace(/\s+/g, " ").trim();
+    const dateISO = dateFromText(details);
+    const href = card.find(".dem_grid_title a").first().attr("href") || card.find("a[href*='ra.co/events/']").first().attr("href");
+    const eventUrl = safeUrl(href, venueUrl);
+    if (!title || !dateISO || !isUpcoming(dateISO) || !eventUrl || seen.has(eventUrl)) return;
+    seen.add(eventUrl);
+
+    events.push({
+      id: `lacheetah-${eventUrl.split("/").filter(Boolean).pop()}`,
+      title,
+      venue: "La Cheetah Club",
+      area: "City Centre",
+      category: "Clubs",
+      dateISO,
+      time: details.match(/\bat\s+(\d{1,2}:\d{2})\b/i)?.[1] || "",
+      description: card.find(".dem_grid_style2_event_text").first().text().replace(/\s+/g, " ").trim(),
+      image: imageFrom($, card, venueUrl),
+      ticketUrl: eventUrl,
+      source: "La Cheetah Club",
+    });
+  });
+
+  return events;
+}
+
+function parseRoom2(html, forcedCategory = "") {
+  const $ = cheerio.load(html);
+  const events = [];
+  const seen = new Set();
+  const venueUrl = "https://room-2.co.uk/";
+
+  $(".columns.events").each((_, element) => {
+    const card = $(element);
+    const heading = card.find(".text-block h4").first();
+    const title = heading.clone().children("p").remove().end().text().replace(/\s+/g, " ").trim();
+    const cardText = card.text().replace(/\s+/g, " ").trim();
+    const dateText = cardText.replace(/\b(\d{1,2})(?:st|nd|rd|th)\b/gi, "$1");
+    const dateISO = dateFromText(dateText);
+    const href = card.find("a[href*='/events/']").first().attr("href");
+    const eventUrl = safeUrl(href, venueUrl);
+    if (!title || !dateISO || !isUpcoming(dateISO) || !eventUrl || seen.has(eventUrl)) return;
+    seen.add(eventUrl);
+
+    events.push({
+      id: `room2-${dateISO}-${title.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`,
+      title,
+      venue: "Room 2",
+      area: "City Centre",
+      category: forcedCategory || classify(title, cardText),
+      dateISO,
+      time: cardText.match(/\b(\d{1,2}:\d{2})\b/)?.[1] || "",
+      description: "",
+      image: imageFrom($, card, venueUrl),
+      ticketUrl: eventUrl,
+      source: "Room 2",
+    });
+  });
+
+  return events;
+}
+
+function parseCreativeBloc(html) {
+  const $ = cheerio.load(html);
+  const events = [];
+  const seen = new Set();
+  const venueUrl = "https://www.eventbrite.co.uk/";
+
+  $("section.discover-vertical-event-card").each((_, element) => {
+    const card = $(element);
+    const eventLink = card.find("a[href*='/e/']").filter((__, link) => $(link).text().trim()).first();
+    const title = eventLink.text().replace(/\s+/g, " ").trim();
+    const cardText = card.text().replace(/\s+/g, " ").trim();
+    const dateISO = dateFromText(cardText);
+    const eventUrl = safeUrl(eventLink.attr("href"), venueUrl);
+    if (!title || !dateISO || !isUpcoming(dateISO) || !eventUrl || seen.has(eventUrl)) return;
+    seen.add(eventUrl);
+
+    events.push({
+      id: `creative-bloc-${eventUrl.match(/tickets-(\d+)/)?.[1] || `${dateISO}-${title.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`}`,
+      title,
+      venue: "Creative Bloc Glasgow",
+      area: "Maryhill",
+      category: "Workshops",
+      dateISO,
+      time: cardText.match(/\b(\d{1,2}:\d{2})(?!\d)/)?.[1] || "",
+      description: "",
+      image: imageFrom($, card, venueUrl),
+      ticketUrl: eventUrl,
+      source: "Creative Bloc",
+    });
+  });
+
+  return events;
+}
+
+function parseOranMor(html) {
+  const $ = cheerio.load(html);
+  const structuredEvents = [];
+  const visit = (value) => {
+    if (Array.isArray(value)) {
+      value.forEach(visit);
+      return;
+    }
+    if (!value || typeof value !== "object") return;
+
+    const types = Array.isArray(value["@type"]) ? value["@type"] : [value["@type"]];
+    if (types.some((type) => /event/i.test(String(type || "")))) structuredEvents.push(value);
+    Object.values(value).forEach(visit);
+  };
+
+  $("script[type='application/ld+json']").each((_, element) => {
+    try {
+      visit(JSON.parse($(element).html()));
+    } catch {
+      return;
+    }
+  });
+
+  const events = [];
+  const seen = new Set();
+  const venueUrl = "https://oran-mor.co.uk/";
+  structuredEvents.forEach((item) => {
+    const title = cheerio.load(`<div>${String(item.name || "")}</div>`).text().replace(/\s+/g, " ").trim();
+    const startDate = String(item.startDate || "");
+    const dateISO = startDate.match(/^\d{4}-\d{2}-\d{2}/)?.[0] || "";
+    const eventUrl = safeUrl(item.url, venueUrl);
+    const key = eventUrl || `${dateISO}|${title.toLowerCase()}`;
+    if (!title || !dateISO || !isUpcoming(dateISO) || !eventUrl || seen.has(key)) return;
+    seen.add(key);
+
+    const description = cheerio.load(`<div>${String(item.description || "")}</div>`).text().replace(/\s+/g, " ").trim();
+    const offer = Array.isArray(item.offers) ? item.offers[0] : item.offers;
+    const image = Array.isArray(item.image) ? item.image[0] : item.image;
+    const imageUrl = typeof image === "string" ? image : image?.url;
+
+    events.push({
+      id: `oranmor-${eventUrl.split("/").filter(Boolean).pop()}`,
+      title,
+      venue: "Òran Mór",
+      area: "West End",
+      category: classify(title, description),
+      dateISO,
+      time: startDate.match(/T(\d{2}:\d{2})/)?.[1] || "",
+      description,
+      image: safeUrl(imageUrl, venueUrl),
+      ticketUrl: safeUrl(offer?.url, venueUrl) || eventUrl,
+      source: "Òran Mór",
+    });
+  });
+
+  return events;
+}
+
 function dateFromText(value) {
-  const matches = [...value.matchAll(/\b(\d{1,2})\s+([A-Za-z]{3,9})(?:\s+(\d{4}))?/g)];
+  const matches = [...value.matchAll(/\b(\d{1,2})\s+([A-Za-z]{3,9})(?:,?\s+(\d{4}))?/g)];
   if (!matches.length) return null;
 
   const start = matches[0];
