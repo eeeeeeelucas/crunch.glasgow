@@ -181,6 +181,7 @@
           <button class="category" type="button" data-category="Clubs" aria-pressed="false">Club Nights</button>
           <button class="category" type="button" data-category="Theatre" aria-pressed="false">Theatre</button>
           <button class="category" type="button" data-category="Comedy" aria-pressed="false">Comedy</button>
+          <button class="category" type="button" data-category="Arts &amp; Exhibitions" aria-pressed="false">Arts &amp; Exhibitions</button>
           <button class="category" type="button" data-category="Workshops" aria-pressed="false">Workshops</button>
         </div>
       </nav>
@@ -205,7 +206,7 @@
         <p class="feed-state" id="feed-state" role="status" aria-live="polite">Loading live event listings…</p>
         <div class="event-list" id="events-grid" aria-live="polite"></div>
         <button class="load-more" id="load-more" type="button" hidden>SHOW MORE EVENTS</button>
-        <p class="feed-note">Live venue feeds refresh every 15 minutes. Workshop and market dates are curated from organiser listings.</p>
+        <p class="feed-note">Venue and citywide listings refresh every 15 minutes. Workshop and market dates are curated from organiser listings.</p>
       </section>
 
       <section class="calendar-view" id="calendar-view" aria-label="Event calendar" hidden>
@@ -254,6 +255,7 @@
 
       function categoryFor(event) {
         const text = `${event.category || ''} ${event.title}`.toLowerCase();
+        if (/^arts?\s*(?:&|and)\s*exhibitions?$/.test(String(event.category || '').toLowerCase())) return 'Arts & Exhibitions';
         if (/workshop|masterclass|life.?drawing|pottery|ceramic|art session|drawing club|illustration|animation|(?:art|craft)\s+fair|(?:winter|craft|makers?)\s+market|flea market/.test(text)) return 'Workshops';
         if (/comedy|stand.?up|comedian|comic/.test(text)) return 'Comedy';
         if (/theatre|theater|play\b|musical|opera|ballet|pantomime/.test(text)) return 'Theatre';
@@ -367,9 +369,10 @@
           if (event.image) {
             const image = document.createElement('img');
             image.src = event.image;
-            image.alt = `${event.title} at ${event.venue}`;
+            image.alt = '';
             image.loading = 'lazy';
             image.decoding = 'async';
+            image.addEventListener('error', () => image.remove(), { once: true });
             artwork.append(image);
           }
 
