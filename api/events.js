@@ -1,5 +1,12 @@
 const cheerio = require("cheerio");
 
+const VISIT_GLASGOW_CATEGORIES = [
+  { name: "Arts & Exhibitions", id: 0, category: "Arts & Exhibitions" },
+  { name: "Music", id: 2, category: "Live Music" },
+  { name: "Theatre", id: 5, category: "Theatre" },
+  { name: "Comedy", id: 7, category: "Comedy" },
+];
+
 const VENUES = [
   {
     name: "King Tut's Wah Wah Hut",
@@ -73,6 +80,48 @@ const VENUES = [
     url: "https://www.atgtickets.com/venues/theatre-royal-glasgow/whats-on/",
     parse: parseTheatreRoyal,
   },
+  {
+    name: "The Glad Cafe",
+    area: "Southside",
+    url: "https://www.thegladcafe.co.uk/whats-on",
+    parse: parseGladCafe,
+  },
+  {
+    name: "The Hug and Pint",
+    area: "West End",
+    url: "https://www.thehugandpint.com/whats-on",
+    parse: parseHugAndPint,
+  },
+  {
+    name: "Citizens Theatre",
+    area: "Gorbals",
+    url: "https://citz.co.uk/whats-on/",
+    parse: parseCitizensTheatre,
+  },
+  {
+    name: "Tron Theatre",
+    area: "City Centre",
+    url: "https://www.tron.co.uk/whats-on/",
+    parse: parseTronTheatre,
+  },
+  {
+    name: "The Glee Club Glasgow",
+    area: "City Centre",
+    url: "https://www.glee.co.uk/glasgow/",
+    parse: parseGleeClub,
+  },
+  {
+    name: "What's On Glasgow",
+    area: "Glasgow",
+    url: whatsOnGlasgowUrl,
+    parse: parseWhatsOnGlasgow,
+  },
+  ...VISIT_GLASGOW_CATEGORIES.map(({ name, id, category }) => ({
+    name: `Visit Glasgow · ${name}`,
+    area: "Glasgow",
+    url: () => `https://www.visitglasgow.com/whats-on?w=a&c=${id}`,
+    parse: (html) => parseVisitGlasgow(html, category),
+  })),
 ];
 
 const WORKSHOP_IMAGES = {
@@ -678,6 +727,7 @@ function toDateISO(day, month, year) {
 function classify(title, details = "", eventType = "") {
   const text = `${title} ${details} ${eventType}`.toLowerCase();
   if (/workshop|masterclass|life.?drawing|pottery|ceramic|art session|drawing club|illustration|animation|(?:art|craft)\s+fair|(?:winter|craft|makers?)\s+market|flea market/.test(text)) return "Workshops";
+  if (/film|screening|exhibition|gallery|visual art/.test(text)) return "Arts & Exhibitions";
   if (/comedy|stand.?up|comedian|comic|laugh-in|red raw/.test(text)) return "Comedy";
   if (/theatre|theater|musical|pantomime|opera|ballet|\bplays?\b/.test(text)) return "Theatre";
   if (/class\b/.test(text)) return "Workshops";
@@ -703,12 +753,21 @@ function safeUrl(value, base) {
 
 function imageFrom($, card, base) {
   const image = $(card).find("img").first();
-  const candidates = (image.attr("srcset") || "").split(",").map((candidate) => {
-    const [url, width] = candidate.trim().split(/\s+/);
-    return { url, width: Number.parseInt(width, 10) || 0 };
-  }).filter((candidate) => candidate.url);
+  const sourceSets = $(card).find("picture source").map((_, source) => {
+    const element = $(source);
+    return element.attr("data-srcset") || element.attr("srcset") || "";
+  }).get();
+  sourceSets.push(image.attr("data-srcset") || "", image.attr("srcset") || "");
+
+  const candidates = sourceSets.flatMap((sourceSet) => sourceSet.split(/,\s+/).map((candidate) => {
+    const [url, descriptor] = candidate.trim().split(/\s+/);
+    const descriptorWidth = descriptor?.match(/^(\d+(?:\.\d+)?)w$/)?.[1];
+    const transformedWidth = url?.match(/(?:^|[,_/])w_(\d+)(?:[,/&]|$)/i)?.[1];
+    return { url, width: Number.parseInt(descriptorWidth || transformedWidth, 10) || 0 };
+  })).filter((candidate) => candidate.url && !candidate.url.startsWith("data:"));
   const balancedSource = candidates.sort((a, b) => Math.abs(a.width - 800) - Math.abs(b.width - 800))[0]?.url;
-  const source = balancedSource || image.attr("src") || image.attr("data-src");
+  const lazySource = image.attr("data-src") || image.attr("data-lazy-src");
+  const source = balancedSource || lazySource || image.attr("src");
   return safeUrl(source, base);
 }
 
@@ -988,16 +1047,37 @@ function parseOranMor(html) {
 }
 
 function dateFromText(value) {
-  const matches = [...value.matchAll(/\b(\d{1,2})\s+([A-Za-z]{3,9})(?:,?\s+(\d{4}))?/g)];
-  if (!matches.length) return null;
+  const normalized = String(value || "")
+    .replace(/\b(\d{1,2})(?:st|nd|rd|th)\b/gi, "$1")
+    .replace(/\b(\d{1,2})([A-Za-z]{3,9})(\d{4})\b/g, "$1 $2 $3");
+  const matches = [...normalized.matchAll(/\b(\d{1,2})\s+([A-Za-z]{3,9})(?:,?\s+(\d{4}))?/g)];
+  if (matches.length) {
+    const start = matches[0];
+    const endWithYear = matches.find((match) => match[3]);
+    const year = Number(start[3] || endWithYear?.[3] || new Date().getFullYear());
+    const startMonth = Number(MONTHS[String(start[2]).slice(0, 3).toLowerCase()]);
+    const endMonth = endWithYear && Number(MONTHS[String(endWithYear[2]).slice(0, 3).toLowerCase()]);
+    const startYear = !start[3] && endMonth && startMonth > endMonth ? year - 1 : year;
+    return toDateISO(start[1], start[2], startYear);
+  }
 
-  const start = matches[0];
-  const endWithYear = matches.find((match) => match[3]);
-  const year = Number(start[3] || endWithYear?.[3] || new Date().getFullYear());
-  const startMonth = Number(MONTHS[String(start[2]).slice(0, 3).toLowerCase()]);
-  const endMonth = endWithYear && Number(MONTHS[String(endWithYear[2]).slice(0, 3).toLowerCase()]);
-  const startYear = !start[3] && endMonth && startMonth > endMonth ? year - 1 : year;
-  return toDateISO(start[1], start[2], startYear);
+  const numericDate = normalized.match(/\b(\d{1,2})[/.](\d{1,2})[/.](\d{4})\b/);
+  if (!numericDate) return null;
+  const [, day, month, year] = numericDate;
+  const dateISO = `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+  return Number.isNaN(Date.parse(`${dateISO}T12:00:00Z`)) ? null : dateISO;
+}
+
+function timeFromText(value) {
+  const text = String(value || "");
+  const twelveHour = text.match(/\b(\d{1,2})(?::(\d{2}))?\s*(AM|PM)\b/i);
+  if (twelveHour) {
+    const hour = Number(twelveHour[1]) % 12 + (twelveHour[3].toUpperCase() === "PM" ? 12 : 0);
+    return `${String(hour).padStart(2, "0")}:${twelveHour[2] || "00"}`;
+  }
+
+  const twentyFourHour = text.match(/\b([01]?\d|2[0-3]):([0-5]\d)\b/);
+  return twentyFourHour ? `${String(twentyFourHour[1]).padStart(2, "0")}:${twentyFourHour[2]}` : "";
 }
 
 function parseBarrowland(html) {
@@ -1155,8 +1235,281 @@ function parseTheatreRoyal(html) {
   return events;
 }
 
+function whatsOnGlasgowUrl() {
+  const now = new Date();
+  return `https://www.whatsonglasgow.co.uk/events/all-events/${now.getFullYear()}/${String(now.getMonth() + 1).padStart(2, "0")}/`;
+}
+
+function classifySourceEvent(title, details = "", eventType = "") {
+  const titleText = title.toLowerCase();
+  const text = `${titleText} ${details}`.toLowerCase();
+  const type = eventType.toLowerCase();
+  if (/workshop/.test(type)) return "Workshops";
+  if (/comedy/.test(type)) return "Comedy";
+  if (/theatre|theater/.test(type)) return "Theatre";
+  if (/arts?|exhibition|film/.test(type)) return "Arts & Exhibitions";
+  if (/clubs?/.test(type)) return "Clubs";
+  if (/music/.test(type)) return "Live Music";
+  if (/workshop|masterclass|life.?drawing|pottery|ceramic|art session|drawing club|illustration|animation/.test(text)) return "Workshops";
+  if (/comedy|stand.?up|comedian|comic|laugh-in|red raw/.test(text)) return "Comedy";
+  if (/theatre|theater|musical|pantomime|opera|ballet|\bplays?\b/.test(titleText)) return "Theatre";
+  if (/\barts?\b|exhibition|gallery|visual art|film|screening|arts? and crafts/.test(text)) return "Arts & Exhibitions";
+  if (/\bclub\b|\bdj\b|rave|techno|house music|dance night|disco|nightlife/.test(text)) return "Clubs";
+  if (/music|concert|gig|band|singer|songwriter|orchestra|jazz/.test(text)) return "Live Music";
+  return "";
+}
+
+function parseVisitGlasgow(html, category) {
+  const $ = cheerio.load(html);
+  const events = [];
+  const seen = new Set();
+  const pageUrl = "https://www.visitglasgow.com/whats-on";
+
+  $(".cards .card").each((_, element) => {
+    const card = $(element);
+    const link = card.find(".card__title .card__link[href]").first();
+    const title = link.text().replace(/\s+/g, " ").trim();
+    const dateISO = dateFromText(card.find(".card__meta").first().text());
+    const eventUrl = safeUrl(link.attr("href"), pageUrl);
+    const key = eventUrl || `${dateISO}|${title.toLowerCase()}`;
+    if (!title || !dateISO || !isUpcoming(dateISO) || !eventUrl || seen.has(key)) return;
+    seen.add(key);
+
+    events.push({
+      id: `visit-glasgow-${category.toLowerCase().replace(/[^a-z0-9]+/g, "-")}-${eventUrl.split("/").filter(Boolean).pop()}`,
+      title,
+      venue: "Glasgow",
+      area: "Glasgow",
+      category,
+      dateISO,
+      time: timeFromText(card.text()),
+      description: "",
+      image: imageFrom($, card, pageUrl),
+      ticketUrl: eventUrl,
+      source: "Visit Glasgow",
+    });
+  });
+
+  return events;
+}
+
+function parseWhatsOnGlasgow(html, pageUrl = "https://www.whatsonglasgow.co.uk/") {
+  const $ = cheerio.load(html);
+  const events = [];
+  const seen = new Set();
+
+  $(".card.event-card").each((_, element) => {
+    const card = $(element);
+    const link = card.find("h4 a[href]").first();
+    const title = link.text().replace(/\s+/g, " ").trim();
+    const metadata = card.find(".card-body > div");
+    const dateISO = dateFromText(metadata.first().text());
+    const locationText = metadata.eq(1).text().replace(/\s+/g, " ").trim();
+    const eventType = card.find(".card-img-overlay span").first().text().trim();
+    const description = card.find(".card-body p").first().text().replace(/\s+/g, " ").trim();
+    const category = classifySourceEvent(title, description, eventType);
+    const eventUrl = safeUrl(link.attr("href"), pageUrl);
+    const key = eventUrl || `${dateISO}|${title.toLowerCase()}`;
+    if (!title || !dateISO || !isUpcoming(dateISO) || !category || !eventUrl || seen.has(key)) return;
+    seen.add(key);
+
+    const locationParts = locationText.split(",").map((part) => part.trim()).filter(Boolean);
+    let venue = locationParts[0] || "Glasgow";
+    const areaText = locationParts[1] || (/^Glasgow\b/i.test(venue) ? venue.replace(/^Glasgow\s*/i, "") : "");
+    if (/^Glasgow\b/i.test(venue)) venue = "Glasgow";
+    const area = areaText.replace(/^Glasgow\s*/i, "") || "Glasgow";
+
+    events.push({
+      id: `whatson-glasgow-${eventUrl.split("/").filter(Boolean).pop()}`,
+      title,
+      venue,
+      area,
+      category,
+      dateISO,
+      time: timeFromText(card.text()),
+      description,
+      image: imageFrom($, card, pageUrl),
+      ticketUrl: eventUrl,
+      source: "What's On Glasgow",
+    });
+  });
+
+  return events;
+}
+
+function parseGladCafe(html, pageUrl = "https://www.thegladcafe.co.uk/whats-on") {
+  const $ = cheerio.load(html);
+  const events = [];
+  const seen = new Set();
+
+  $("a.Event.Block[href*='/events/']").each((_, element) => {
+    const link = $(element);
+    const href = link.attr("href") || "";
+    const dateISO = href.match(/\/events\/(\d{4}-\d{2}-\d{2})-/)?.[1] || dateFromText(link.find(".EventBlock-date-day").text());
+    const title = link.find(".EventBlock-title, .EventBlock-name").first().text().replace(/\s+/g, " ").trim();
+    const eventUrl = safeUrl(href, pageUrl);
+    if (!title || !dateISO || !isUpcoming(dateISO) || !eventUrl || seen.has(eventUrl)) return;
+    seen.add(eventUrl);
+
+    events.push({
+      id: `glad-cafe-${href.split("/").filter(Boolean).pop()}`,
+      title,
+      venue: "The Glad Cafe",
+      area: "Southside",
+      category: classify(title, link.text()),
+      dateISO,
+      time: timeFromText(link.find(".EventBlock-time").text()),
+      description: "",
+      image: imageFrom($, link, pageUrl),
+      ticketUrl: eventUrl,
+      source: "The Glad Cafe",
+    });
+  });
+
+  return events;
+}
+
+function parseHugAndPint(html, pageUrl = "https://www.thehugandpint.com/whats-on") {
+  const $ = cheerio.load(html);
+  const events = [];
+  const seen = new Set();
+
+  $(".EventListingsWrapper a.Block[href*='/events/']").each((_, element) => {
+    const link = $(element);
+    const href = link.attr("href") || "";
+    const dateISO = href.match(/\/events\/(\d{4}-\d{2}-\d{2})-/)?.[1] || dateFromText(link.find(".date").text());
+    const title = link.find(".title").first().text().replace(/\s+/g, " ").trim();
+    const eventUrl = safeUrl(href, pageUrl);
+    if (!title || !dateISO || !isUpcoming(dateISO) || !eventUrl || seen.has(eventUrl)) return;
+    seen.add(eventUrl);
+
+    events.push({
+      id: `hug-and-pint-${href.split("/").filter(Boolean).pop()}`,
+      title,
+      venue: "The Hug and Pint",
+      area: "West End",
+      category: classify(title, link.text()),
+      dateISO,
+      time: timeFromText(link.text()),
+      description: "",
+      image: imageFrom($, link, pageUrl),
+      ticketUrl: eventUrl,
+      source: "The Hug and Pint",
+    });
+  });
+
+  return events;
+}
+
+function parseTronTheatre(html, pageUrl = "https://www.tron.co.uk/whats-on/") {
+  const $ = cheerio.load(html);
+  const events = [];
+  const seen = new Set();
+
+  $(".post_grid_item").each((_, element) => {
+    const card = $(element);
+    const link = card.find("a[href*='/shows/']").first();
+    const title = card.find(".event_title").first().text().replace(/\s+/g, " ").trim();
+    const dateISO = dateFromText(card.text());
+    const eventUrl = safeUrl(link.attr("href"), pageUrl);
+    if (!title || !dateISO || !isUpcoming(dateISO) || !eventUrl || seen.has(eventUrl)) return;
+    seen.add(eventUrl);
+
+    const category = /music|concert|folk|singer|band|songbook|jazz|gig/i.test(title) ? "Live Music" : "Theatre";
+    events.push({
+      id: `tron-${eventUrl.split("/").filter(Boolean).pop()}`,
+      title,
+      venue: "Tron Theatre",
+      area: "City Centre",
+      category,
+      dateISO,
+      time: "",
+      description: "",
+      image: imageFrom($, card, pageUrl),
+      ticketUrl: eventUrl,
+      source: "Tron Theatre",
+    });
+  });
+
+  return events;
+}
+
+function parseCitizensTheatre(html, pageUrl = "https://citz.co.uk/whats-on/") {
+  const $ = cheerio.load(html);
+  const events = [];
+  const seen = new Set();
+
+  $(".c-event-card--shows").each((_, element) => {
+    const card = $(element);
+    const link = card.find(".c-event-card__permalink[href]").first();
+    const title = link.text().replace(/\s+/g, " ").trim();
+    const dateISO = dateFromText(card.text());
+    const eventUrl = safeUrl(link.attr("href"), pageUrl);
+    if (!title || !dateISO || !isUpcoming(dateISO) || !eventUrl || seen.has(eventUrl)) return;
+    seen.add(eventUrl);
+
+    events.push({
+      id: `citizens-${eventUrl.split("/").filter(Boolean).pop()}`,
+      title,
+      venue: "Citizens Theatre",
+      area: "Gorbals",
+      category: "Theatre",
+      dateISO,
+      time: timeFromText(card.text()),
+      description: card.find(".c-event-card__description").first().text().replace(/\s+/g, " ").trim(),
+      image: imageFrom($, card, pageUrl),
+      ticketUrl: eventUrl,
+      source: "Citizens Theatre",
+    });
+  });
+
+  return events;
+}
+
+function parseGleeClub(html, pageUrl = "https://www.glee.co.uk/glasgow/") {
+  const $ = cheerio.load(html);
+  const events = [];
+  const seen = new Set();
+
+  $("article.show-item").each((_, element) => {
+    const card = $(element);
+    const classNames = card.attr("class") || "";
+    const category = /filter-live-comedy|filter-comedy/.test(classNames)
+      ? "Comedy"
+      : /filter-live-music|filter-music/.test(classNames)
+        ? "Live Music"
+        : /filter-drag/.test(classNames)
+          ? "Comedy"
+          : "";
+    const title = card.find(".show-title .title").first().text().replace(/\s+/g, " ").trim();
+    const dateISO = dateFromText(card.find(".date").first().text());
+    const ticketHref = card.find("a[href*='booking.glee.co.uk']").first().attr("href");
+    const showHref = card.find("a[href*='/performer/']").first().attr("href");
+    const ticketUrl = safeUrl(ticketHref, pageUrl) || safeUrl(showHref, pageUrl);
+    if (!title || !dateISO || !isUpcoming(dateISO) || !category || !ticketUrl || seen.has(ticketUrl)) return;
+    seen.add(ticketUrl);
+
+    events.push({
+      id: `glee-${ticketHref?.match(/\d+/)?.[0] || `${dateISO}-${title.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`}`,
+      title,
+      venue: "The Glee Club Glasgow",
+      area: "City Centre",
+      category,
+      dateISO,
+      time: "",
+      description: "",
+      image: imageFrom($, card, pageUrl),
+      ticketUrl,
+      source: "The Glee Club Glasgow",
+    });
+  });
+
+  return events;
+}
+
 async function fetchVenue(venue) {
-  const response = await fetch(venue.url, {
+  const venueUrl = typeof venue.url === "function" ? venue.url() : venue.url;
+  const response = await fetch(venueUrl, {
     headers: {
       Accept: "text/html,application/xhtml+xml",
       "User-Agent": "GlasgowCoolEvents/1.0 (+https://www.glasgow.cool)",
@@ -1167,7 +1520,64 @@ async function fetchVenue(venue) {
 
   const html = await response.text();
   if (html.length > 5_000_000) throw new Error("Venue page exceeded the size limit");
-  return venue.parse(html).map((event) => ({ ...event, area: event.area || venue.area }));
+  const events = await venue.parse(html);
+  return events.map((event) => ({ ...event, area: event.area || venue.area }));
+}
+
+function normalizeEventText(value) {
+  return String(value || "")
+    .toLowerCase()
+    .replace(/&/g, " and ")
+    .replace(/\bthe\b/g, " ")
+    .replace(/\bglasgow\b/g, " ")
+    .replace(/[^a-z0-9]+/g, "");
+}
+
+function normalizeEventTitle(value) {
+  return normalizeEventText(value).replace(/anewmusical$/, "");
+}
+
+function isGenericVenue(venue) {
+  return ["", "citycentre", "online"].includes(normalizeEventText(venue));
+}
+
+function isAggregatedEvent(event) {
+  return event.source === "What's On Glasgow" || event.source === "Visit Glasgow";
+}
+
+function daysApart(firstDate, secondDate) {
+  return Math.abs(Date.parse(`${firstDate}T00:00:00Z`) - Date.parse(`${secondDate}T00:00:00Z`)) / 86_400_000;
+}
+
+function deduplicateEvents(events) {
+  const uniqueEvents = [];
+
+  events.forEach((event) => {
+    const titleKey = normalizeEventTitle(event.title);
+    const venueKey = normalizeEventText(event.venue);
+    const duplicateIndex = uniqueEvents.findIndex((existing) => {
+      const sameTitle = normalizeEventTitle(existing.title) === titleKey;
+      const sameVenue = normalizeEventText(existing.venue) === venueKey;
+      const venueMatches = sameVenue || isGenericVenue(existing.venue) || isGenericVenue(event.venue);
+      const sameDate = existing.dateISO === event.dateISO;
+      const nearbyAggregatedDate = (isAggregatedEvent(existing) || isAggregatedEvent(event))
+        && daysApart(existing.dateISO, event.dateISO) <= 1;
+      return sameTitle && venueMatches && (sameDate || nearbyAggregatedDate);
+    });
+
+    if (duplicateIndex === -1) {
+      uniqueEvents.push(event);
+      return;
+    }
+
+    const existing = uniqueEvents[duplicateIndex];
+    if ((isAggregatedEvent(existing) && !isAggregatedEvent(event))
+      || (isGenericVenue(existing.venue) && !isGenericVenue(event.venue))) {
+      uniqueEvents[duplicateIndex] = event;
+    }
+  });
+
+  return uniqueEvents;
 }
 
 module.exports = async function handler(_request, response) {
@@ -1178,10 +1588,10 @@ module.exports = async function handler(_request, response) {
 
   const results = await Promise.allSettled(VENUES.map(fetchVenue));
   const featuredWorkshops = FEATURED_WORKSHOPS.filter((event) => isUpcoming(event.dateISO));
-  const events = [
+  const events = deduplicateEvents([
     ...results.flatMap((result) => result.status === "fulfilled" ? result.value : []),
     ...featuredWorkshops,
-  ];
+  ]);
   const sources = [
     ...VENUES.map((venue, index) => ({
       name: venue.name,
