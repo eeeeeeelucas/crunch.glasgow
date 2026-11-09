@@ -72,7 +72,11 @@
       .calendar-view[hidden] { display: none; }
       .calendar-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
       .calendar-head h2 { margin: 0; color: var(--pink); font-size: 13px; letter-spacing: .08em; }
-      .calendar-month { color: #a7b0c0; font-size: 11px; }
+      .calendar-month-controls { display: flex; align-items: center; gap: 8px; }
+      .calendar-month { color: #a7b0c0; font-size: 11px; text-align: center; }
+      .calendar-month-button { display: grid; width: 30px; height: 30px; place-items: center; border: 1px solid var(--border); border-radius: 6px; background: var(--panel); color: #cbd2dd; font-size: 18px; line-height: 1; cursor: pointer; }
+      .calendar-month-button:hover:not(:disabled), .calendar-month-button:focus-visible { border-color: var(--pink); outline: none; }
+      .calendar-month-button:disabled { color: #586273; cursor: default; }
       .calendar-grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 5px; }
       .weekday, .day { display: grid; min-height: 37px; place-items: center; border-radius: 6px; font-size: 11px; }
       .weekday { color: #7f8999; font-weight: 800; }
@@ -125,7 +129,7 @@
           <button class="category" type="button" data-category="Live Music" aria-pressed="false">♫ Live Music</button>
           <button class="category" type="button" data-category="Clubs" aria-pressed="false">Clubs</button>
           <button class="category" type="button" data-category="Theatre" aria-pressed="false">Theatre</button>
-          <button class="category" type="button" data-category="Comedy" aria-pressed="false">Comedy</button>
+          <button class="category" type="button" data-category="Stand Up" aria-pressed="false">Stand Up</button>
           <button class="category" type="button" data-category="Workshops" aria-pressed="false">Workshops</button>
         </div>
       </nav>
@@ -149,7 +153,11 @@
       <section class="calendar-view" id="calendar-view" aria-label="Event calendar" hidden>
         <div class="calendar-head">
           <h2>// PICK A DATE</h2>
-          <span class="calendar-month" id="calendar-month"></span>
+          <div class="calendar-month-controls" aria-label="Calendar month">
+            <button class="calendar-month-button" id="calendar-prev" type="button" aria-label="Previous month">‹</button>
+            <span class="calendar-month" id="calendar-month" aria-live="polite"></span>
+            <button class="calendar-month-button" id="calendar-next" type="button" aria-label="Next month">›</button>
+          </div>
         </div>
         <div class="calendar-grid" id="calendar-grid"></div>
         <button class="date-clear" id="clear-date" type="button">CLEAR DATE FILTER</button>
@@ -176,6 +184,9 @@
       const loadMoreButton = document.getElementById('load-more');
       const pageSize = 24;
       const today = new Date();
+      const calendarStart = new Date(today.getFullYear(), today.getMonth(), 1);
+      const calendarEnd = new Date(today.getFullYear(), today.getMonth() + 6, 1);
+      let calendarCursor = new Date(calendarStart);
       let visibleLimit = pageSize;
       let events = [];
       let activeCategory = 'All';
@@ -183,8 +194,8 @@
 
       function categoryFor(event) {
         const text = `${event.category || ''} ${event.title}`.toLowerCase();
-        if (/comedy|stand.?up|comic/.test(text)) return 'Comedy';
-        if (/theatre|theater|play\b|musical/.test(text)) return 'Theatre';
+        if (/comedy|stand.?up|comedian|comic/.test(text)) return 'Stand Up';
+        if (/theatre|theater|play\b|musical|opera|ballet|pantomime/.test(text)) return 'Theatre';
         if (/workshop|class\b|masterclass/.test(text)) return 'Workshops';
         if (/club|club night|dj\b|rave|techno|house music|dance night|disco/.test(text)) return 'Clubs';
         return 'Live Music';
@@ -320,9 +331,12 @@
 
       function renderCalendar() {
         const grid = document.getElementById('calendar-grid');
-        const year = today.getFullYear();
-        const month = today.getMonth();
-        document.getElementById('calendar-month').textContent = new Intl.DateTimeFormat('en-GB', { month: 'long', year: 'numeric' }).format(today).toUpperCase();
+        const year = calendarCursor.getFullYear();
+        const month = calendarCursor.getMonth();
+        const monthName = new Intl.DateTimeFormat('en-GB', { month: 'long' }).format(calendarCursor);
+        document.getElementById('calendar-month').textContent = new Intl.DateTimeFormat('en-GB', { month: 'long', year: 'numeric' }).format(calendarCursor).toUpperCase();
+        document.getElementById('calendar-prev').disabled = calendarCursor <= calendarStart;
+        document.getElementById('calendar-next').disabled = calendarCursor >= calendarEnd;
         grid.replaceChildren();
         ['M', 'T', 'W', 'T', 'F', 'S', 'S'].forEach((label) => {
           const weekday = document.createElement('span');
@@ -338,7 +352,12 @@
           blank.setAttribute('aria-hidden', 'true');
           grid.append(blank);
         }
-        const datesWithEvents = new Set(events.map((event) => event.dateISO));
+        const query = searchInput.value.trim().toLowerCase();
+        const datesWithEvents = new Set(events.filter((event) => {
+          const matchesCategory = activeCategory === 'All' || categoryFor(event) === activeCategory;
+          const haystack = `${event.title} ${event.venue} ${event.area || ''} ${event.description || ''}`.toLowerCase();
+          return matchesCategory && (!query || haystack.includes(query));
+        }).map((event) => event.dateISO));
         for (let day = 1; day <= daysInMonth; day += 1) {
           const dateISO = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
           const button = document.createElement('button');
@@ -346,7 +365,7 @@
           button.type = 'button';
           button.textContent = String(day);
           button.setAttribute('aria-pressed', String(selectedDate === dateISO));
-          button.setAttribute('aria-label', `${day} ${new Intl.DateTimeFormat('en-GB', { month: 'long' }).format(today)}${datesWithEvents.has(dateISO) ? ', events listed' : ''}`);
+          button.setAttribute('aria-label', `${day} ${monthName} ${year}${datesWithEvents.has(dateISO) ? ', events listed' : ''}`);
           button.addEventListener('click', () => {
             selectedDate = selectedDate === dateISO ? '' : dateISO;
             visibleLimit = pageSize;
@@ -393,6 +412,14 @@
       document.getElementById('refresh-button').addEventListener('click', loadEvents);
       document.getElementById('nav-home').addEventListener('click', () => setActiveNav('home'));
       document.getElementById('nav-calendar').addEventListener('click', () => setActiveNav('calendar'));
+      document.getElementById('calendar-prev').addEventListener('click', () => {
+        calendarCursor = new Date(calendarCursor.getFullYear(), calendarCursor.getMonth() - 1, 1);
+        renderCalendar();
+      });
+      document.getElementById('calendar-next').addEventListener('click', () => {
+        calendarCursor = new Date(calendarCursor.getFullYear(), calendarCursor.getMonth() + 1, 1);
+        renderCalendar();
+      });
       document.getElementById('clear-date').addEventListener('click', () => {
         selectedDate = '';
         visibleLimit = pageSize;
