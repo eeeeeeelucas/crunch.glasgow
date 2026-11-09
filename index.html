@@ -4,19 +4,19 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <meta name="theme-color" content="#050b14" />
-    <meta name="description" content="Find what’s on in Glasgow: live music, club nights, comedy, theatre, art workshops, life drawing and local makers’ markets. Browse upcoming events by date and neighbourhood." />
+    <meta name="description" content="Browse upcoming events in Glasgow: live gigs, club nights, comedy, theatre, exhibitions, workshops and local markets. Filter by date and neighbourhood to find things to do today or this weekend." />
     <meta name="robots" content="index,follow,max-image-preview:large" />
     <link rel="canonical" href="https://www.glasgow.cool/" />
     <meta property="og:type" content="website" />
     <meta property="og:site_name" content="glasgow.cool" />
     <meta property="og:locale" content="en_GB" />
-    <meta property="og:title" content="What’s On in Glasgow | Events, Gigs & Workshops | glasgow.cool" />
-    <meta property="og:description" content="Discover upcoming Glasgow gigs, comedy, theatre, club nights, creative workshops and local markets." />
+    <meta property="og:title" content="What’s On in Glasgow | Events, Gigs & Club Nights | glasgow.cool" />
+    <meta property="og:description" content="Discover upcoming Glasgow gigs, club nights, comedy, theatre, creative workshops and local markets." />
     <meta property="og:url" content="https://www.glasgow.cool/" />
     <meta name="twitter:card" content="summary" />
-    <meta name="twitter:title" content="What’s On in Glasgow | glasgow.cool" />
-    <meta name="twitter:description" content="Find upcoming Glasgow events, gigs, theatre, workshops and local markets." />
-    <title>What’s On in Glasgow | Events, Gigs & Workshops | glasgow.cool</title>
+    <meta name="twitter:title" content="What’s On in Glasgow | Events, Gigs & Club Nights | glasgow.cool" />
+    <meta name="twitter:description" content="Find upcoming Glasgow events, gigs, club nights, theatre, workshops and local markets." />
+    <title>What’s On in Glasgow | Events, Gigs & Club Nights | glasgow.cool</title>
     <script type="application/ld+json">
       {
         "@context": "https://schema.org",
@@ -30,6 +30,15 @@
           "name": "glasgow.cool",
           "url": "https://www.glasgow.cool/"
         }
+      }
+    </script>
+    <script id="event-list-jsonld" type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "ItemList",
+        "name": "Upcoming events in Glasgow",
+        "itemListOrder": "https://schema.org/ItemListOrderAscending",
+        "itemListElement": []
       }
     </script>
     <style>
@@ -189,6 +198,7 @@
       <section class="feed" id="home-view" aria-label="Upcoming Glasgow events">
         <header class="seo-intro">
           <h1>What’s on in Glasgow</h1>
+          <p>Find upcoming Glasgow events, from live gigs and club nights to comedy, theatre, exhibitions and creative workshops. Browse by date and neighbourhood.</p>
         </header>
         <label class="search">
           <span aria-hidden="true">⌕</span>
@@ -206,7 +216,7 @@
         <p class="feed-state" id="feed-state" role="status" aria-live="polite">Loading live event listings…</p>
         <div class="event-list" id="events-grid" aria-live="polite"></div>
         <button class="load-more" id="load-more" type="button" hidden>SHOW MORE EVENTS</button>
-        <p class="feed-note">Venue and citywide listings refresh every 15 minutes. Workshop and market dates are curated from organiser listings.</p>
+          <p class="feed-note">Venue and citywide listings refresh every 15 minutes. Listings without a reliable upcoming date are excluded; workshops and markets are curated from organiser listings.</p>
       </section>
 
       <section class="calendar-view" id="calendar-view" aria-label="Event calendar" hidden>
@@ -269,6 +279,30 @@
         const date = new Date(year, month - 1, day, 12);
         const label = new Intl.DateTimeFormat('en-GB', { weekday: 'short', day: 'numeric', month: 'short' }).format(date);
         return time ? `${label} · ${time}` : `${label} · TIME TBC`;
+      }
+
+      function updateEventStructuredData() {
+        const structuredData = document.getElementById('event-list-jsonld');
+        const items = events.slice(0, 100);
+        structuredData.textContent = JSON.stringify({
+          '@context': 'https://schema.org',
+          '@type': 'ItemList',
+          name: 'Upcoming events in Glasgow',
+          url: 'https://www.glasgow.cool/',
+          numberOfItems: items.length,
+          itemListOrder: 'https://schema.org/ItemListOrderAscending',
+          itemListElement: items.map((event, index) => ({
+            '@type': 'ListItem',
+            position: index + 1,
+            item: {
+              '@type': 'Thing',
+              name: event.title,
+              url: event.ticketUrl,
+              image: event.image || undefined,
+              description: `${formatDate(event.dateISO, event.time)} at ${event.venue}`,
+            },
+          })),
+        });
       }
 
       function visibleEvents() {
@@ -372,6 +406,7 @@
             image.alt = '';
             image.loading = 'lazy';
             image.decoding = 'async';
+            image.referrerPolicy = 'no-referrer';
             image.addEventListener('error', () => image.remove(), { once: true });
             artwork.append(image);
           }
@@ -425,6 +460,7 @@
           const result = await response.json();
           if (!response.ok) throw new Error(result.error || 'Could not load event listings.');
           events = Array.isArray(result.events) ? result.events : [];
+          updateEventStructuredData();
           if (!events.length) {
             eventCount.textContent = '0 ITEMS';
             feedState.textContent = result.message || 'No upcoming listings were found on the connected venue pages.';

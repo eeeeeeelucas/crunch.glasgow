@@ -5,6 +5,7 @@ const VISIT_GLASGOW_CATEGORIES = [
   { name: "Music", id: 2, category: "Live Music" },
   { name: "Theatre", id: 5, category: "Theatre" },
   { name: "Comedy", id: 7, category: "Comedy" },
+  { name: "Clubs", id: 12, category: "Clubs" },
 ];
 
 const VENUES = [
@@ -115,6 +116,18 @@ const VENUES = [
     area: "Glasgow",
     url: whatsOnGlasgowUrl,
     parse: parseWhatsOnGlasgow,
+  },
+  {
+    name: "The Skinny · Glasgow",
+    area: "Glasgow",
+    url: "https://www.theskinny.co.uk/whats-on/glasgow",
+    parse: parseSkinny,
+  },
+  {
+    name: "The Skinny · Clubs",
+    area: "Glasgow",
+    url: "https://www.theskinny.co.uk/whats-on/glasgow/clubs",
+    parse: parseSkinny,
   },
   ...VISIT_GLASGOW_CATEGORIES.map(({ name, id, category }) => ({
     name: `Visit Glasgow · ${name}`,
@@ -807,10 +820,34 @@ function parseKingTuts(html) {
   return events;
 }
 
-function parseSwg3(html) {
+async function fetchSwg3Artwork(eventUrl) {
+  try {
+    const url = new URL(eventUrl);
+    if (url.protocol !== "https:" || url.hostname !== "swg3.tv") return "";
+
+    const response = await fetch(url, {
+      headers: {
+        Accept: "text/html,application/xhtml+xml",
+        "User-Agent": "GlasgowCoolEvents/1.0 (+https://www.glasgow.cool)",
+      },
+      signal: AbortSignal.timeout(1500),
+    });
+    if (!response.ok || !response.headers.get("content-type")?.includes("text/html")) return "";
+
+    const html = await response.text();
+    if (html.length > 1_000_000) return "";
+    const $ = cheerio.load(html);
+    return safeUrl($("meta[property='og:image']").attr("content"), "https://swg3.tv/");
+  } catch {
+    return "";
+  }
+}
+
+async function parseSwg3(html) {
   const $ = cheerio.load(html);
   const events = [];
   const seen = new Set();
+  const artworkLookups = [];
 
   $("article.card--event").each((_, element) => {
     const card = $(element);
@@ -832,7 +869,7 @@ function parseSwg3(html) {
     if (!eventUrl || seen.has(key)) return;
     seen.add(key);
 
-    events.push({
+    const event = {
       id: `swg3-${dateISO}-${title.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`,
       title,
       venue,
@@ -844,8 +881,14 @@ function parseSwg3(html) {
       image: imageFrom($, card, "https://swg3.tv/"),
       ticketUrl: safeUrl(ticketHref, "https://swg3.tv/") || eventUrl,
       source: "SWG3",
-    });
+    };
+    events.push(event);
+    if (!event.image) artworkLookups.push({ event, eventUrl });
   });
+
+  await Promise.all(artworkLookups.slice(0, 12).map(async ({ event, eventUrl }) => {
+    event.image = await fetchSwg3Artwork(eventUrl);
+  }));
 
   return events;
 }
@@ -1068,6 +1111,12 @@ function dateFromText(value) {
   return Number.isNaN(Date.parse(`${dateISO}T12:00:00Z`)) ? null : dateISO;
 }
 
+function dateFromSkinnyText(value) {
+  const text = String(value || "").replace(/\s+/g, " ").trim();
+  if (!/\b20\d{2}\b/.test(text)) return null;
+  return dateFromText(text);
+}
+
 function timeFromText(value) {
   const text = String(value || "");
   const twelveHour = text.match(/\b(\d{1,2})(?::(\d{2}))?\s*(AM|PM)\b/i);
@@ -1259,6 +1308,50 @@ function classifySourceEvent(title, details = "", eventType = "") {
   return "";
 }
 
+const visitGlasgowVenueCache = new Map();
+
+async function fetchVisitGlasgowVenue(eventUrl) {
+  const cached = visitGlasgowVenueCache.get(eventUrl);
+  if (cached && cached.expiresAt > Date.now()) {
+    const venue = await cached.promise;
+    if (venue) return venue;
+    if (visitGlasgowVenueCache.get(eventUrl) === cached) visitGlasgowVenueCache.delete(eventUrl);
+  }
+
+  const lookup = (async () => {
+    try {
+      const url = new URL(eventUrl);
+      if (url.protocol !== "https:" || url.hostname !== "www.visitglasgow.com") return "";
+
+      const response = await fetch(url, {
+        headers: {
+          Accept: "text/html,application/xhtml+xml",
+          "User-Agent": "GlasgowCoolEvents/1.0 (+https://www.glasgow.cool)",
+        },
+        signal: AbortSignal.timeout(2500),
+      });
+      if (!response.ok || !response.headers.get("content-type")?.includes("text/html")) return "";
+
+      const html = await response.text();
+      if (html.length > 1_000_000) return "";
+      const $ = cheerio.load(html);
+      const venueBlock = $(".page-header__meta-contents").filter((_, element) => {
+        return $(element).find(".page-header__meta-label").first().text().replace(/\s+/g, " ").trim().toLowerCase() === "where";
+      }).first();
+      return venueBlock.find(".page-header__meta-value").first().text().replace(/\s+/g, " ").trim();
+    } catch {
+      return "";
+    }
+  })();
+
+  const cacheEntry = { promise: lookup, expiresAt: Date.now() + 15 * 60 * 1000 };
+  visitGlasgowVenueCache.set(eventUrl, cacheEntry);
+  if (visitGlasgowVenueCache.size > 120) visitGlasgowVenueCache.delete(visitGlasgowVenueCache.keys().next().value);
+  const venue = await lookup;
+  if (!venue && visitGlasgowVenueCache.get(eventUrl) === cacheEntry) visitGlasgowVenueCache.delete(eventUrl);
+  return venue;
+}
+
 function parseVisitGlasgow(html, category) {
   const $ = cheerio.load(html);
   const events = [];
@@ -1287,6 +1380,64 @@ function parseVisitGlasgow(html, category) {
       image: imageFrom($, card, pageUrl),
       ticketUrl: eventUrl,
       source: "Visit Glasgow",
+    });
+  });
+
+  return events;
+}
+
+async function enrichVisitGlasgowVenues(events) {
+  const missingVenues = events
+    .filter((event) => event.source === "Visit Glasgow" && isGenericVenue(event.venue))
+    .sort((a, b) => Number(b.category === "Clubs") - Number(a.category === "Clubs") || a.dateISO.localeCompare(b.dateISO))
+    .slice(0, 8);
+  let nextIndex = 0;
+  const workers = Array.from({ length: 8 }, async () => {
+    while (nextIndex < missingVenues.length) {
+      const event = missingVenues[nextIndex++];
+      const venue = await fetchVisitGlasgowVenue(event.ticketUrl);
+      if (venue && !isGenericVenue(venue)) event.venue = venue;
+    }
+  });
+  await Promise.all(workers);
+}
+
+function parseSkinny(html) {
+  const $ = cheerio.load(html);
+  const events = [];
+  const seen = new Set();
+  const pageUrl = "https://www.theskinny.co.uk/";
+
+  $("a.overlay[href^='/whats-on/glasgow/']").each((_, element) => {
+    const link = $(element);
+    const card = link.closest(".panel.js-link");
+    if (!card.length) return;
+
+    const title = card.find(".panel__text__title").first().text().replace(/\s+/g, " ").trim();
+    const dateISO = dateFromSkinnyText(card.find(".panel__text__date").first().text());
+    const eventUrl = safeUrl(link.attr("href"), pageUrl);
+    const eventType = card.find(".panel__tag").first().text().replace(/\s+/g, " ").trim();
+    const category = classifySourceEvent(title, card.text(), eventType);
+    const key = eventUrl || `${dateISO}|${title.toLowerCase()}`;
+    if (!title || !dateISO || !isUpcoming(dateISO) || !category || !eventUrl || seen.has(key)) return;
+    seen.add(key);
+
+    const info = card.find(".panel__text__info").first();
+    const venue = info.find(".title").first().text().replace(/\s+/g, " ").trim() || "Glasgow";
+    const pathSlug = new URL(eventUrl).pathname.split("/").filter(Boolean).pop();
+
+    events.push({
+      id: `skinny-${pathSlug}-${dateISO}`,
+      title,
+      venue,
+      area: "Glasgow",
+      category,
+      dateISO,
+      time: timeFromText(info.text()),
+      description: "",
+      image: imageFrom($, card, pageUrl),
+      ticketUrl: safeUrl(card.find(".btn__buy-now[href]").first().attr("href"), pageUrl) || eventUrl,
+      source: "The Skinny",
     });
   });
 
@@ -1538,7 +1689,7 @@ function normalizeEventTitle(value) {
 }
 
 function isGenericVenue(venue) {
-  return ["", "citycentre", "online"].includes(normalizeEventText(venue));
+  return ["", "citycentre", "online", "glasgow"].includes(normalizeEventText(venue));
 }
 
 function isAggregatedEvent(event) {
@@ -1571,8 +1722,13 @@ function deduplicateEvents(events) {
     }
 
     const existing = uniqueEvents[duplicateIndex];
+    const preferClubCategory = isAggregatedEvent(existing)
+      && isAggregatedEvent(event)
+      && event.category === "Clubs"
+      && existing.category !== "Clubs";
     if ((isAggregatedEvent(existing) && !isAggregatedEvent(event))
-      || (isGenericVenue(existing.venue) && !isGenericVenue(event.venue))) {
+      || (isGenericVenue(existing.venue) && !isGenericVenue(event.venue))
+      || preferClubCategory) {
       uniqueEvents[duplicateIndex] = event;
     }
   });
@@ -1582,9 +1738,6 @@ function deduplicateEvents(events) {
 
 module.exports = async function handler(_request, response) {
   response.setHeader("Cache-Control", "public, s-maxage=900, stale-while-revalidate=1800");
-  response.setHeader("X-Content-Type-Options", "nosniff");
-  response.setHeader("Referrer-Policy", "strict-origin-when-cross-origin");
-  response.setHeader("Permissions-Policy", "camera=(), microphone=(), geolocation=()");
 
   const results = await Promise.allSettled(VENUES.map(fetchVenue));
   const featuredWorkshops = FEATURED_WORKSHOPS.filter((event) => isUpcoming(event.dateISO));
@@ -1610,6 +1763,7 @@ module.exports = async function handler(_request, response) {
   }
 
   events.sort((a, b) => `${a.dateISO} ${a.time || ""}`.localeCompare(`${b.dateISO} ${b.time || ""}`));
+  await enrichVisitGlasgowVenues(events);
   return response.status(200).json({
     events,
     sources,
