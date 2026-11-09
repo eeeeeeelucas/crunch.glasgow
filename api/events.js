@@ -1159,7 +1159,7 @@ async function fetchVenue(venue) {
   const response = await fetch(venue.url, {
     headers: {
       Accept: "text/html,application/xhtml+xml",
-      "User-Agent": "CrunchGlasgowEvents/1.0 (+https://crunchglasgow.vercel.app)",
+      "User-Agent": "GlasgowCoolEvents/1.0 (+https://www.glasgow.cool)",
     },
     signal: AbortSignal.timeout(8000),
   });
