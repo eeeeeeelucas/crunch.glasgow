@@ -138,7 +138,7 @@
           <button class="category" type="button" data-category="Live Music" aria-pressed="false">Live Music</button>
           <button class="category" type="button" data-category="Clubs" aria-pressed="false">Club Nights</button>
           <button class="category" type="button" data-category="Theatre" aria-pressed="false">Theatre</button>
-          <button class="category" type="button" data-category="Stand Up" aria-pressed="false">Stand Up</button>
+          <button class="category" type="button" data-category="Comedy" aria-pressed="false">Comedy</button>
           <button class="category" type="button" data-category="Workshops" aria-pressed="false">Workshops</button>
         </div>
       </nav>
@@ -204,14 +204,15 @@
       let calendarCursor = new Date(calendarStart);
       let visibleLimit = pageSize;
       let events = [];
-      let activeCategory = 'All';
+      const activeCategories = new Set();
       let selectedDate = '';
 
       function categoryFor(event) {
         const text = `${event.category || ''} ${event.title}`.toLowerCase();
-        if (/comedy|stand.?up|comedian|comic/.test(text)) return 'Stand Up';
+        if (/workshop|masterclass|life.?drawing|pottery|ceramic|art session|drawing club/.test(text)) return 'Workshops';
+        if (/comedy|stand.?up|comedian|comic/.test(text)) return 'Comedy';
         if (/theatre|theater|play\b|musical|opera|ballet|pantomime/.test(text)) return 'Theatre';
-        if (/workshop|class\b|masterclass/.test(text)) return 'Workshops';
+        if (/class\b/.test(text)) return 'Workshops';
         if (/club|club night|dj\b|rave|techno|house music|dance night|disco/.test(text)) return 'Clubs';
         return 'Live Music';
       }
@@ -226,7 +227,7 @@
       function visibleEvents() {
         const query = searchInput.value.trim().toLowerCase();
         return events.filter((event) => {
-          const matchesCategory = activeCategory === 'All' || categoryFor(event) === activeCategory;
+          const matchesCategory = activeCategories.size === 0 || activeCategories.has(categoryFor(event));
           const matchesDate = !selectedDate || event.dateISO === selectedDate;
           const haystack = `${event.title} ${event.venue} ${event.area || ''} ${event.description || ''}`.toLowerCase();
           return matchesCategory && matchesDate && (!query || haystack.includes(query));
@@ -254,18 +255,27 @@
         filterChips.append(chip);
       }
 
+      function syncCategoryButtons() {
+        categoryButtons.forEach((button) => {
+          const isAll = button.dataset.category === 'All';
+          const isSelected = isAll ? activeCategories.size === 0 : activeCategories.has(button.dataset.category);
+          button.setAttribute('aria-pressed', String(isSelected));
+        });
+      }
+
       function renderActiveFilters() {
         filterChips.replaceChildren();
 
-        if (activeCategory !== 'All') {
-          const activeButton = categoryButtons.find((button) => button.dataset.category === activeCategory);
-          const label = activeButton?.textContent.trim() || activeCategory;
+        activeCategories.forEach((category) => {
+          const activeButton = categoryButtons.find((button) => button.dataset.category === category);
+          const label = activeButton?.textContent.trim() || category;
           appendFilterChip(label, label, () => {
-            activeCategory = 'All';
-            categoryButtons.forEach((button) => button.setAttribute('aria-pressed', String(button.dataset.category === 'All')));
+            activeCategories.delete(category);
+            syncCategoryButtons();
+            renderCalendar();
             renderEvents();
           });
-        }
+        });
 
         if (selectedDate) {
           appendFilterChip(formatFilterDate(selectedDate), 'date', () => {
@@ -423,7 +433,7 @@
         }
         const query = searchInput.value.trim().toLowerCase();
         const datesWithEvents = new Set(events.filter((event) => {
-          const matchesCategory = activeCategory === 'All' || categoryFor(event) === activeCategory;
+          const matchesCategory = activeCategories.size === 0 || activeCategories.has(categoryFor(event));
           const haystack = `${event.title} ${event.venue} ${event.area || ''} ${event.description || ''}`.toLowerCase();
           return matchesCategory && (!query || haystack.includes(query));
         }).map((event) => event.dateISO));
@@ -470,8 +480,16 @@
       });
       categoryButtons.forEach((button) => button.addEventListener('click', () => {
         visibleLimit = pageSize;
-        activeCategory = button.dataset.category;
-        categoryButtons.forEach((candidate) => candidate.setAttribute('aria-pressed', String(candidate === button)));
+        const category = button.dataset.category;
+        if (category === 'All') {
+          activeCategories.clear();
+        } else if (activeCategories.has(category)) {
+          activeCategories.delete(category);
+        } else {
+          activeCategories.add(category);
+        }
+        syncCategoryButtons();
+        renderCalendar();
         renderEvents();
       }));
       searchInput.addEventListener('input', () => {
