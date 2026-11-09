@@ -1,0 +1,17 @@
+{
+  "headers": [
+    {
+      "source": "/(.*)",
+      "headers": [
+        { "key": "X-Content-Type-Options", "value": "nosniff" },
+        { "key": "Referrer-Policy", "value": "no-referrer" },
+        { "key": "Strict-Transport-Security", "value": "max-age=63072000" },
+        { "key": "Permissions-Policy", "value": "camera=(), microphone=(), geolocation=()" },
+        {
+          "key": "Content-Security-Policy",
+          "value": "default-src 'self'; base-uri 'self'; object-src 'none'; form-action 'self'; img-src 'self' https: data:; font-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self' 'sha256-t1DgKTe1/Cozp/PhQj3lGhFy6+tNx4DdOV9eWrAxds4=' 'sha256-ibSo3wqcYNBKkxBEO+UEgLc2vjKGeu0mag2s2i99j64=' 'sha256-VtEG9skWyFaXwYpaLna5/ihUXmhonfGJP0voOKkOwi0='; script-src-attr 'none'; connect-src 'self'"
+        }
+      ]
+    }
+  ]
+}
