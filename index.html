@@ -252,7 +252,7 @@
         if (/comedy|stand.?up|comedian|comic/.test(text)) return 'Comedy';
         if (/theatre|theater|play\b|musical|opera|ballet|pantomime/.test(text)) return 'Theatre';
         if (/class\b/.test(text)) return 'Workshops';
-        if (/club|club night|dj\b|rave|techno|house music|dance night|disco/.test(text)) return 'Clubs';
+        if (/\bclubs?\b|\bdj\b|rave|techno|house music|dance night|disco/.test(text)) return 'Clubs';
         return 'Live Music';
       }
 
