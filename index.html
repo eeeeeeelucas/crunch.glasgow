@@ -53,7 +53,8 @@
       .shell { width: min(100%, 560px); min-height: calc(100vh - 108px); margin: 0 auto; overflow: hidden; border: 1px solid #101a29; border-radius: 30px; background: var(--bg); box-shadow: 0 20px 70px #0008; }
       .topbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 16px 18px; border-bottom: 1px solid var(--border); }
       .brand { display: flex; align-items: center; gap: 12px; min-width: 0; }
-      .brand-mark { display: grid; width: 44px; height: 44px; flex: 0 0 auto; place-items: center; border-radius: 11px; background: var(--pink); color: #05070b; font-family: Arial, Helvetica, sans-serif; font-size: 22px; font-weight: 950; letter-spacing: -.12em; line-height: 1; box-shadow: 0 0 24px #ff2a6d4d; }
+      .brand-mark { display: grid; width: 44px; height: 44px; flex: 0 0 auto; place-items: center; overflow: hidden; border-radius: 14px; background: var(--pink); box-shadow: 0 0 24px #ff2a6d4d; }
+      .brand-mark svg { display: block; width: 100%; height: 100%; }
       .brand-name { margin: 0; font-size: 15px; font-weight: 800; letter-spacing: .12em; white-space: nowrap; }
       .brand-name span { color: var(--pink); }
       .brand-subtitle { margin: 4px 0 0; color: #a0a8b6; font-size: 10px; letter-spacing: .12em; }
@@ -152,7 +153,13 @@
     <main class="shell">
       <header class="topbar">
         <div class="brand">
-          <span class="brand-mark" aria-hidden="true">C!</span>
+          <span class="brand-mark" aria-hidden="true">
+            <svg viewBox="0 0 44 44" focusable="false">
+              <path d="M 28.8 13.5 C 26.7 11.7 24.2 10.8 21.4 10.8 C 14.8 10.8 10.2 15.7 10.2 22 C 10.2 28.3 14.8 33.2 21.4 33.2 C 24.2 33.2 26.7 32.3 28.8 30.5" fill="none" stroke="#05070b" stroke-width="5.6" stroke-linecap="round" stroke-linejoin="round" />
+              <path d="M35 12.5v13" fill="none" stroke="#05070b" stroke-width="5.6" stroke-linecap="round" />
+              <circle cx="35" cy="31.8" r="2.8" fill="#05070b" />
+            </svg>
+          </span>
           <div>
             <p class="brand-name">CRUNCH<span>.GLASGOW</span></p>
             <p class="brand-subtitle">GLASGOW EVENTS &amp; NIGHTLIFE</p>
