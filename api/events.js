@@ -9,33 +9,135 @@ const VENUES = [
   },
   {
     name: "SWG3",
-    area: "West End",
+    area: "Finnieston",
     url: "https://swg3.tv/events",
     parse: parseSwg3,
   },
   {
     name: "Barrowland Ballroom",
-    area: "East End",
+    area: "Gallowgate",
     url: "https://ballroom.barrowland.co.uk/collections/gig-list",
     parse: parseBarrowland,
   },
   {
     name: "The Garage",
-    area: "City Centre",
+    area: "Sauchiehall Street",
     url: "https://garageglasgow.co.uk/gig-listings/",
     parse: parseGarage,
   },
   {
     name: "The Stand Comedy Club",
-    area: "City Centre",
+    area: "Woodlands",
     url: "https://www.thestand.co.uk/whats-on/glasgow",
     parse: parseTheStand,
   },
   {
     name: "Theatre Royal Glasgow",
-    area: "City Centre",
+    area: "Cowcaddens",
     url: "https://www.atgtickets.com/venues/theatre-royal-glasgow/whats-on/",
     parse: parseTheatreRoyal,
+  },
+];
+
+const WORKSHOP_IMAGES = {
+  pottery: "https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1120562863%2F2315308768883%2F1%2Foriginal.20250910-214111?crop=focalpoint&fit=crop&w=940&auto=format%2Ccompress&q=75&sharp=10&fp-x=0.0289575289575&fp-y=0.511787066442&s=a1fbdc7867880d014efe737bc23e5be8",
+  improv: "https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1193151509%2F568772578929%2F1%2Foriginal.20260910-113854?crop=focalpoint&fit=crop&w=940&auto=format%2Ccompress&q=75&sharp=10&fp-x=0.5&fp-y=0.5&s=2d30f397b5ee3135ba9584aaced3d12e",
+  lifeDrawing: "https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1188027416%2F135022850827%2F1%2Foriginal.20260701-191425?crop=focalpoint&fit=crop&w=940&auto=format%2Ccompress&q=75&sharp=10&fp-x=0.5&fp-y=0.5&s=e9096ec8197e899fa5305dab7ea9ad3f",
+  maryhill: "https://static1.squarespace.com/static/4ff41e65e4b03ec22b1153c6/t/66ab96336f72ee2e76e41414/1722521143284/thumbnail.jfif?format=1500w",
+  shawlands: "https://static1.squarespace.com/static/68d692d6afb51077feac0ae3/68e92cc911680316efe272d8/6ae0caa96c5caa1f9dafcedb/1793117074482/acuity+squares+2+.png?format=1500w",
+};
+
+const FEATURED_WORKSHOPS = [
+  {
+    id: "creative-bloc-pottery-2026-11-14",
+    title: "Pottery Wheel Taster Sessions",
+    venue: "Creative Bloc Glasgow",
+    area: "Maryhill",
+    category: "Workshops",
+    dateISO: "2026-11-14",
+    time: "12:30",
+    description: "A beginner-friendly wheel-throwing class with a tutor; one pot is trimmed, glazed and fired for collection.",
+    image: WORKSHOP_IMAGES.pottery,
+    ticketUrl: "https://www.eventbrite.co.uk/e/pottery-wheel-taster-sessions-tickets-1999175066440",
+    source: "Creative Bloc",
+  },
+  {
+    id: "creative-bloc-pottery-2026-11-21",
+    title: "Pottery Wheel Taster Sessions",
+    venue: "Creative Bloc Glasgow",
+    area: "Maryhill",
+    category: "Workshops",
+    dateISO: "2026-11-21",
+    time: "12:30",
+    description: "A beginner-friendly wheel-throwing class with a tutor; one pot is trimmed, glazed and fired for collection.",
+    image: WORKSHOP_IMAGES.pottery,
+    ticketUrl: "https://www.eventbrite.co.uk/e/pottery-wheel-taster-sessions-tickets-1999175066440",
+    source: "Creative Bloc",
+  },
+  {
+    id: "creative-bloc-pottery-2026-11-28",
+    title: "Pottery Wheel Taster Sessions",
+    venue: "Creative Bloc Glasgow",
+    area: "Maryhill",
+    category: "Workshops",
+    dateISO: "2026-11-28",
+    time: "12:30",
+    description: "A beginner-friendly wheel-throwing class with a tutor; one pot is trimmed, glazed and fired for collection.",
+    image: WORKSHOP_IMAGES.pottery,
+    ticketUrl: "https://www.eventbrite.co.uk/e/pottery-wheel-taster-sessions-tickets-1999175066440",
+    source: "Creative Bloc",
+  },
+  {
+    id: "glasgow-improv-beginners-2026-11-16",
+    title: "Beginners Drop-In Improv Comedy Workshop",
+    venue: "The Old Hairdresser's",
+    area: "City Centre",
+    category: "Workshops",
+    dateISO: "2026-11-16",
+    time: "18:30",
+    description: "A welcoming taster session covering the basics of improvisation, with practice on stage.",
+    image: WORKSHOP_IMAGES.improv,
+    ticketUrl: "https://www.eventbrite.co.uk/e/beginners-drop-in-improv-comedy-workshop-nov-tickets-2000402098526",
+    source: "Glasgow Improv Theatre",
+  },
+  {
+    id: "atyn-life-drawing-2026-11-23",
+    title: "All The Young Nudes · Life Drawing Club",
+    venue: "House of Toad",
+    area: "Park Circus",
+    category: "Workshops",
+    dateISO: "2026-11-23",
+    time: "19:00",
+    description: "A welcoming weekly life-drawing session. Bring your own materials or borrow from the venue; no tuition is provided.",
+    image: WORKSHOP_IMAGES.lifeDrawing,
+    ticketUrl: "https://www.eventbrite.co.uk/e/all-the-young-nudes-life-drawing-club-glasgow-tickets-1118778168619",
+    source: "All The Young Nudes",
+  },
+  {
+    id: "maryhill-draw-together-2026-11-10",
+    title: "Draw Together · Art Sessions",
+    venue: "The Whitehouse",
+    area: "Maryhill",
+    category: "Workshops",
+    dateISO: "2026-11-10",
+    time: "12:30",
+    description: "Relaxed community drawing sessions for all experience levels, with Doodle and Natter and a still-life session.",
+    image: WORKSHOP_IMAGES.maryhill,
+    ticketUrl: "https://www.maryhillburghhalls.org.uk/whats-on",
+    source: "Maryhill Burgh Halls",
+  },
+  {
+    id: "craft-pottery-corona-2026-11-22",
+    title: "Studio Ghibli Pottery Painting",
+    venue: "The Corona Bar",
+    area: "Shawlands",
+    category: "Workshops",
+    dateISO: "2026-11-22",
+    time: "15:30",
+    description: "A Studio Ghibli-themed pottery-painting afternoon with pottery, materials and a drink included.",
+    image: WORKSHOP_IMAGES.shawlands,
+    ticketUrl: "https://www.thecraftpottery.com/coming-up/corona-bar-glasgow-4zemx-zn4er-ed8mr",
+    source: "The Craft Pottery",
   },
 ];
 
@@ -54,9 +156,10 @@ function toDateISO(day, month, year) {
 
 function classify(title, details = "", eventType = "") {
   const text = `${title} ${details} ${eventType}`.toLowerCase();
-  if (/comedy|stand.?up|comedian|comic|laugh-in|red raw/.test(text)) return "Stand Up";
+  if (/workshop|masterclass|life.?drawing|pottery|ceramic|art session|drawing club/.test(text)) return "Workshops";
+  if (/comedy|stand.?up|comedian|comic|laugh-in|red raw/.test(text)) return "Comedy";
   if (/theatre|theater|musical|pantomime|opera|ballet|\bplays?\b/.test(text)) return "Theatre";
-  if (/workshop|masterclass/.test(text)) return "Workshops";
+  if (/class\b/.test(text)) return "Workshops";
   if (/club|\bdj\b|rave|techno|house music|dance night|disco/.test(text)) return "Clubs";
   return "Live Music";
 }
@@ -153,7 +256,7 @@ function parseSwg3(html) {
       id: `swg3-${dateISO}-${title.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`,
       title,
       venue,
-      area: "West End",
+      area: "Finnieston",
       category: classify(title),
       dateISO,
       time,
@@ -204,7 +307,7 @@ function parseBarrowland(html) {
       id: `barrowland-${dateISO}-${title.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`,
       title,
       venue: "Barrowland Ballroom",
-      area: "East End",
+      area: "Gallowgate",
       category: classify(title, text),
       dateISO,
       time,
@@ -243,7 +346,7 @@ function parseGarage(html) {
       id: `garage-${dateISO}-${title.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`,
       title,
       venue,
-      area: "City Centre",
+      area: "Sauchiehall Street",
       category: classify(title, description, eventType),
       dateISO,
       time: timeMatch?.[1]?.replace(/\s+/g, " ").trim() || "",
@@ -281,8 +384,8 @@ function parseTheStand(html) {
       id: `stand-${dateISO}-${title.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`,
       title,
       venue: "The Stand Comedy Club",
-      area: "City Centre",
-      category: "Stand Up",
+      area: "Woodlands",
+      category: "Comedy",
       dateISO,
       time,
       description: "",
@@ -321,7 +424,7 @@ function parseTheatreRoyal(html) {
       id: `theatre-royal-${dateISO}-${title.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`,
       title,
       venue: "Theatre Royal Glasgow",
-      area: "City Centre",
+      area: "Cowcaddens",
       category: classify(title, type),
       dateISO,
       time: "",
@@ -357,14 +460,21 @@ module.exports = async function handler(_request, response) {
   response.setHeader("Permissions-Policy", "camera=(), microphone=(), geolocation=()");
 
   const results = await Promise.allSettled(VENUES.map(fetchVenue));
-  const events = results.flatMap((result) => result.status === "fulfilled" ? result.value : []);
-  const sources = VENUES.map((venue, index) => ({
-    name: venue.name,
-    available: results[index].status === "fulfilled",
-    eventCount: results[index].status === "fulfilled" ? results[index].value.length : 0,
-  }));
+  const featuredWorkshops = FEATURED_WORKSHOPS.filter((event) => isUpcoming(event.dateISO));
+  const events = [
+    ...results.flatMap((result) => result.status === "fulfilled" ? result.value : []),
+    ...featuredWorkshops,
+  ];
+  const sources = [
+    ...VENUES.map((venue, index) => ({
+      name: venue.name,
+      available: results[index].status === "fulfilled",
+      eventCount: results[index].status === "fulfilled" ? results[index].value.length : 0,
+    })),
+    { name: "Featured workshops", available: featuredWorkshops.length > 0, eventCount: featuredWorkshops.length },
+  ];
 
-  if (results.every((result) => result.status === "rejected")) {
+  if (results.every((result) => result.status === "rejected") && !featuredWorkshops.length) {
     return response.status(502).json({
       error: "The venue event pages could not be reached right now.",
       events: [],
