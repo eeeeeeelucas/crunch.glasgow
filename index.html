@@ -215,7 +215,7 @@
         </div>
         <p class="feed-state" id="feed-state" role="status" aria-live="polite">Loading live event listings…</p>
         <div class="event-list" id="events-grid" aria-live="polite"></div>
-        <button class="load-more" id="load-more" type="button" hidden>SHOW MORE EVENTS</button>
+        <button class="load-more" id="load-more" type="button" aria-controls="events-grid" hidden>SHOW MORE EVENTS</button>
           <p class="feed-note">Venue and citywide listings refresh every 15 minutes. Listings without a reliable upcoming date are excluded; workshops and markets are curated from organiser listings.</p>
       </section>
 
@@ -253,7 +253,7 @@
       const filterChips = document.getElementById('filter-chips');
       const categoryButtons = [...document.querySelectorAll('[data-category]')];
       const loadMoreButton = document.getElementById('load-more');
-      const pageSize = 24;
+      const pageSize = 15;
       const today = new Date();
       const calendarStart = new Date(today.getFullYear(), today.getMonth(), 1);
       const calendarEnd = new Date(today.getFullYear(), today.getMonth() + 6, 1);
@@ -377,11 +377,11 @@
         activeFilters.hidden = filterChips.childElementCount === 0;
       }
 
-      function renderEvents() {
+      function renderEvents(append = false) {
         renderActiveFilters();
         const filtered = visibleEvents();
         eventCount.textContent = `${filtered.length} ${filtered.length === 1 ? 'ITEM' : 'ITEMS'}`;
-        eventsGrid.replaceChildren();
+        if (!append) eventsGrid.replaceChildren();
 
         if (!filtered.length) {
           loadMoreButton.hidden = true;
@@ -391,9 +391,10 @@
         }
 
         feedState.hidden = true;
-        const visibleCards = filtered.slice(0, visibleLimit);
+        const startIndex = append ? eventsGrid.children.length : 0;
+        const visibleCards = filtered.slice(startIndex, visibleLimit);
         loadMoreButton.hidden = filtered.length <= visibleLimit;
-        loadMoreButton.textContent = `SHOW MORE EVENTS · ${filtered.length - visibleCards.length} REMAINING`;
+        loadMoreButton.textContent = `SHOW MORE EVENTS · ${filtered.length - visibleLimit} REMAINING`;
         visibleCards.forEach((event) => {
           const card = document.createElement('article');
           card.className = 'event-card';
@@ -552,10 +553,22 @@
         if (!home) renderCalendar();
       }
 
-      loadMoreButton.addEventListener('click', () => {
-        visibleLimit += pageSize;
-        renderEvents();
-      });
+      function loadNextEventPage() {
+        const filtered = visibleEvents();
+        if (visibleLimit >= filtered.length) return;
+        visibleLimit = Math.min(visibleLimit + pageSize, filtered.length);
+        renderEvents(true);
+      }
+
+      loadMoreButton.addEventListener('click', loadNextEventPage);
+      if ('IntersectionObserver' in window) {
+        const loadMoreObserver = new IntersectionObserver((entries) => {
+          if (entries.some((entry) => entry.isIntersecting) && !loadMoreButton.hidden) {
+            loadNextEventPage();
+          }
+        }, { rootMargin: '500px 0px' });
+        loadMoreObserver.observe(loadMoreButton);
+      }
       categoryButtons.forEach((button) => button.addEventListener('click', () => {
         visibleLimit = pageSize;
         const category = button.dataset.category;
