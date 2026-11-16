@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <meta name="theme-color" content="#050b14" />
-    <meta name="description" content="Browse upcoming events in Glasgow: live gigs, club nights, comedy, theatre, exhibitions, workshops and local markets. Filter by date and neighbourhood to find things to do today or this weekend." />
+    <meta name="description" content="Browse upcoming events in Glasgow: live gigs, club nights, comedy, theatre, exhibitions, workshops and local markets. Filter by date, area and price to find free things to do today or this weekend." />
     <meta name="robots" content="index,follow,max-image-preview:large" />
     <link rel="canonical" href="https://www.glasgow.cool/" />
     <meta property="og:type" content="website" />
@@ -82,6 +82,10 @@
       .search span { color: var(--muted); font-size: 18px; }
       .search input { width: 100%; min-width: 0; padding: 14px 0; border: 0; outline: 0; background: transparent; color: var(--text); font-size: 13px; }
       .search input::placeholder { color: #5f6a7c; }
+      .price-filter { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 10px; padding: 9px 12px; border: 1px solid var(--border); border-radius: 8px; background: var(--panel); }
+      .price-filter span { color: var(--muted); font-size: 10px; font-weight: 800; letter-spacing: .08em; }
+      .price-filter select { max-width: 70%; padding: 4px 6px; border: 0; background: transparent; color: var(--text); font: inherit; font-size: 12px; text-align: right; }
+      .price-filter select:focus-visible { outline: 2px solid var(--lime); outline-offset: 3px; }
       .active-filters { display: flex; align-items: flex-start; gap: 8px; margin-top: 12px; }
       .active-filters[hidden] { display: none; }
       .filter-caption { flex: 0 0 auto; padding-top: 7px; color: var(--lime); font-size: 9px; font-weight: 800; letter-spacing: .08em; }
@@ -107,6 +111,7 @@
       .event-date { margin: 0 0 8px; color: var(--pink); font-size: 12px; font-weight: 800; }
       .event-title { margin: 0 0 8px; font-size: 19px; line-height: 1.3; letter-spacing: .01em; }
       .event-venue { margin: 0 0 9px; color: #a4adbb; font-size: 13px; }
+      .event-price { margin: 0 0 9px; color: #d9f4aa; font-size: 11px; font-weight: 800; letter-spacing: .04em; }
       .event-description { margin: 0; color: #818b9b; font-size: 12px; line-height: 1.6; }
       .event-footer { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 15px; border-top: 1px solid var(--border); }
       .event-source { color: #8993a3; font-size: 10px; }
@@ -198,12 +203,24 @@
       <section class="feed" id="home-view" aria-label="Upcoming Glasgow events">
         <header class="seo-intro">
           <h1>What’s on in Glasgow</h1>
-          <p>Find upcoming Glasgow events, from live gigs and club nights to comedy, theatre, exhibitions and creative workshops. Browse by date and neighbourhood.</p>
+          <p>Find upcoming Glasgow events, live gigs, club nights, comedy, theatre, exhibitions and creative workshops. Browse by date, genre and area.</p>
         </header>
         <label class="search">
           <span aria-hidden="true">⌕</span>
           <span class="sr-only" hidden>Search events</span>
           <input id="search-input" type="search" aria-label="Search band, venue, or area" placeholder="// Search band, venue, area..." autocomplete="off" />
+        </label>
+        <label class="price-filter">
+          <span aria-hidden="true">PRICE</span>
+          <select id="price-filter" aria-label="Filter events by price">
+            <option value="any">Any price</option>
+            <option value="free">Free events</option>
+            <option value="under10">Under £10</option>
+            <option value="under25">Under £25</option>
+            <option value="under50">Under £50</option>
+            <option value="paid">Any paid event</option>
+            <option value="unknown">Price not listed</option>
+          </select>
         </label>
         <div class="active-filters" id="active-filters" role="region" aria-label="Active filters" hidden>
           <span class="filter-caption">ACTIVE FILTERS</span>
@@ -249,6 +266,7 @@
       const feedState = document.getElementById('feed-state');
       const eventCount = document.getElementById('event-count');
       const searchInput = document.getElementById('search-input');
+      const priceFilter = document.getElementById('price-filter');
       const activeFilters = document.getElementById('active-filters');
       const filterChips = document.getElementById('filter-chips');
       const categoryButtons = [...document.querySelectorAll('[data-category]')];
@@ -272,6 +290,30 @@
         if (/class\b/.test(text)) return 'Workshops';
         if (/\bclubs?\b|\bdj\b|rave|techno|house music|dance night|disco/.test(text)) return 'Clubs';
         return 'Live Music';
+      }
+
+      function eventPriceStatus(event) {
+        const price = String(event.price || '').trim();
+        const text = `${price} ${event.description || ''}`.toLowerCase();
+        if (/\bfree\b|£\s*0(?:\.00)?\b|\bcomplimentary\b|\bno charge\b/.test(text)) return 'free';
+        if (price || /\bpaid(?:\s+(?:entry|admission|tickets?))?\b/.test(text)) return 'paid';
+        return 'unknown';
+      }
+
+      function eventPriceAmount(event) {
+        if (eventPriceStatus(event) === 'free') return 0;
+        const match = String(event.price || '').match(/£\s*(\d+(?:\.\d{1,2})?)/i);
+        return match ? Number(match[1]) : null;
+      }
+
+      function matchesPrice(event) {
+        const selected = priceFilter.value;
+        const status = eventPriceStatus(event);
+        if (selected === 'any') return true;
+        if (selected === 'free' || selected === 'paid' || selected === 'unknown') return status === selected;
+        const maximum = { under10: 10, under25: 25, under50: 50 }[selected];
+        const amount = eventPriceAmount(event);
+        return maximum !== undefined && amount !== null && amount < maximum;
       }
 
       function formatDate(dateISO, time) {
@@ -310,8 +352,9 @@
         return events.filter((event) => {
           const matchesCategory = activeCategories.size === 0 || activeCategories.has(categoryFor(event));
           const matchesDate = !selectedDate || event.dateISO === selectedDate;
+          const matchesSelectedPrice = matchesPrice(event);
           const haystack = `${event.title} ${event.venue} ${event.area || ''} ${event.description || ''}`.toLowerCase();
-          return matchesCategory && matchesDate && (!query || haystack.includes(query));
+          return matchesCategory && matchesDate && matchesSelectedPrice && (!query || haystack.includes(query));
         });
       }
 
@@ -361,6 +404,16 @@
         if (selectedDate) {
           appendFilterChip(formatFilterDate(selectedDate), 'date', () => {
             selectedDate = '';
+            renderCalendar();
+            renderEvents();
+          });
+        }
+
+        if (priceFilter.value !== 'any') {
+          const label = priceFilter.selectedOptions[0]?.textContent.trim() || 'Price';
+          appendFilterChip(`PRICE · ${label}`, 'price', () => {
+            priceFilter.value = 'any';
+            visibleLimit = pageSize;
             renderCalendar();
             renderEvents();
           });
@@ -431,10 +484,19 @@
           const venue = document.createElement('p');
           venue.className = 'event-venue';
           venue.textContent = `⌖  ${event.venue}`;
+          const priceStatus = eventPriceStatus(event);
+          let price = null;
+          if (priceStatus !== 'unknown') {
+            price = document.createElement('p');
+            price.className = 'event-price';
+            price.textContent = priceStatus === 'free' ? 'FREE EVENT' : `PRICE · ${event.price || 'Paid'}`;
+          }
           const description = document.createElement('p');
           description.className = 'event-description';
           description.textContent = event.description || `Official listing from ${event.source}. Check the venue page for event details and availability.`;
-          body.append(date, title, venue, description);
+          body.append(date, title, venue);
+          if (price) body.append(price);
+          body.append(description);
 
           const footer = document.createElement('div');
           footer.className = 'event-footer';
@@ -513,8 +575,9 @@
         const query = searchInput.value.trim().toLowerCase();
         const datesWithEvents = new Set(events.filter((event) => {
           const matchesCategory = activeCategories.size === 0 || activeCategories.has(categoryFor(event));
+          const matchesSelectedPrice = matchesPrice(event);
           const haystack = `${event.title} ${event.venue} ${event.area || ''} ${event.description || ''}`.toLowerCase();
-          return matchesCategory && (!query || haystack.includes(query));
+          return matchesCategory && matchesSelectedPrice && (!query || haystack.includes(query));
         }).map((event) => event.dateISO));
         for (let day = 1; day <= daysInMonth; day += 1) {
           const dateISO = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
@@ -585,9 +648,18 @@
       }));
       searchInput.addEventListener('input', () => {
         visibleLimit = pageSize;
+        renderCalendar();
         renderEvents();
       });
-      document.getElementById('nav-home').addEventListener('click', () => setActiveNav('home'));
+      priceFilter.addEventListener('change', () => {
+        visibleLimit = pageSize;
+        renderCalendar();
+        renderEvents();
+      });
+      document.getElementById('nav-home').addEventListener('click', () => {
+        setActiveNav('home');
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      });
       document.getElementById('nav-calendar').addEventListener('click', () => setActiveNav('calendar'));
       document.getElementById('calendar-prev').addEventListener('click', () => {
         calendarCursor = new Date(calendarCursor.getFullYear(), calendarCursor.getMonth() - 1, 1);

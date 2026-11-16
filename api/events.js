@@ -811,6 +811,7 @@ function parseKingTuts(html) {
       dateISO,
       time: "",
       description: "",
+      price: priceFromText(text),
       image,
       ticketUrl: eventUrl,
       source: "King Tut's",
@@ -878,6 +879,7 @@ async function parseSwg3(html) {
       dateISO,
       time,
       description: "",
+      price: priceFromText(card.text()),
       image: imageFrom($, card, "https://swg3.tv/"),
       ticketUrl: safeUrl(ticketHref, "https://swg3.tv/") || eventUrl,
       source: "SWG3",
@@ -918,6 +920,7 @@ function parseSubClub(html) {
       dateISO,
       time: text.match(/\b(\d{1,2}:\d{2})\b/)?.[1] || "",
       description: "",
+      price: priceFromText(text),
       image: imageFrom($, link, venueUrl),
       ticketUrl: eventUrl,
       source: "Sub Club",
@@ -952,6 +955,7 @@ function parseLaCheetah(html) {
       dateISO,
       time: details.match(/\bat\s+(\d{1,2}:\d{2})\b/i)?.[1] || "",
       description: card.find(".dem_grid_style2_event_text").first().text().replace(/\s+/g, " ").trim(),
+      price: priceFromText(card.text()),
       image: imageFrom($, card, venueUrl),
       ticketUrl: eventUrl,
       source: "La Cheetah Club",
@@ -988,6 +992,7 @@ function parseRoom2(html, forcedCategory = "") {
       dateISO,
       time: cardText.match(/\b(\d{1,2}:\d{2})\b/)?.[1] || "",
       description: "",
+      price: priceFromText(card.text()),
       image: imageFrom($, card, venueUrl),
       ticketUrl: eventUrl,
       source: "Room 2",
@@ -1022,6 +1027,7 @@ function parseCreativeBloc(html) {
       dateISO,
       time: cardText.match(/\b(\d{1,2}:\d{2})(?!\d)/)?.[1] || "",
       description: "",
+      price: priceFromText(card.text()),
       image: imageFrom($, card, venueUrl),
       ticketUrl: eventUrl,
       source: "Creative Bloc",
@@ -1070,6 +1076,9 @@ function parseOranMor(html) {
     const offer = Array.isArray(item.offers) ? item.offers[0] : item.offers;
     const image = Array.isArray(item.image) ? item.image[0] : item.image;
     const imageUrl = typeof image === "string" ? image : image?.url;
+    const priceText = offer && typeof offer === "object"
+      ? `${offer.priceCurrency === "GBP" ? "£" : ""}${offer.price ?? ""} ${offer.description || ""}`
+      : String(offer || "");
 
     events.push({
       id: `oranmor-${eventUrl.split("/").filter(Boolean).pop()}`,
@@ -1080,6 +1089,7 @@ function parseOranMor(html) {
       dateISO,
       time: startDate.match(/T(\d{2}:\d{2})/)?.[1] || "",
       description,
+      price: priceFromText(`${priceText} ${description}`),
       image: safeUrl(imageUrl, venueUrl),
       ticketUrl: safeUrl(offer?.url, venueUrl) || eventUrl,
       source: "Òran Mór",
@@ -1129,6 +1139,20 @@ function timeFromText(value) {
   return twentyFourHour ? `${String(twentyFourHour[1]).padStart(2, "0")}:${twentyFourHour[2]}` : "";
 }
 
+function priceFromText(value) {
+  const text = String(value || "").trim();
+  if (!text) return "";
+  if (/(?:^|[^a-z])free(?:$|[^a-z])|£ *0(?:[.]00)?|complimentary|no charge/i.test(text)) return "Free";
+
+  const priceMatch = text.match(/(from *)?£ *([0-9]+(?:[.][0-9]{1,2})?)/i);
+  if (priceMatch) return `${priceMatch[1] ? "From " : ""}£${priceMatch[2]}`;
+
+  const currencyMatch = text.match(/([0-9]+(?:[.][0-9]{1,2})?) *(?:GBP|pounds?)/i);
+  if (currencyMatch) return `£${currencyMatch[1]}`;
+  if (/(?:^|[^a-z])paid(?:$|[^a-z])/i.test(text)) return "Paid";
+  return "";
+}
+
 function parseBarrowland(html) {
   const $ = cheerio.load(html);
   const events = [];
@@ -1158,6 +1182,7 @@ function parseBarrowland(html) {
       dateISO,
       time,
       description: "",
+      price: priceFromText(card.text()),
       image: imageFrom($, card, venueUrl),
       ticketUrl: safeUrl(ticketHref, venueUrl) || venueUrl,
       source: "Barrowland Ballroom",
@@ -1197,6 +1222,7 @@ function parseGarage(html) {
       dateISO,
       time: timeMatch?.[1]?.replace(/\s+/g, " ").trim() || "",
       description,
+      price: priceFromText(card.text()),
       image: imageFrom($, card, venueUrl),
       ticketUrl: safeUrl(ticketHref, venueUrl) || safeUrl(detailLink, venueUrl),
       source: "The Garage",
@@ -1235,6 +1261,7 @@ function parseTheStand(html) {
       dateISO,
       time,
       description: "",
+      price: priceFromText(card.text()),
       image: imageFrom($, card, venueUrl),
       ticketUrl: safeUrl(href, "https://www.thestand.co.uk/"),
       source: "The Stand",
@@ -1275,6 +1302,7 @@ function parseTheatreRoyal(html) {
       dateISO,
       time: "",
       description: "",
+      price: priceFromText(card.text()),
       image: imageFrom($, card, venueUrl),
       ticketUrl: safeUrl(ticketHref, "https://www.atgtickets.com/") || safeUrl(href, "https://www.atgtickets.com/"),
       source: "Theatre Royal Glasgow",
@@ -1377,6 +1405,7 @@ function parseVisitGlasgow(html, category) {
       dateISO,
       time: timeFromText(card.text()),
       description: "",
+      price: priceFromText(card.text()),
       image: imageFrom($, card, pageUrl),
       ticketUrl: eventUrl,
       source: "Visit Glasgow",
@@ -1389,14 +1418,19 @@ function parseVisitGlasgow(html, category) {
 async function enrichVisitGlasgowVenues(events) {
   const missingVenues = events
     .filter((event) => event.source === "Visit Glasgow" && isGenericVenue(event.venue))
-    .sort((a, b) => Number(b.category === "Clubs") - Number(a.category === "Clubs") || a.dateISO.localeCompare(b.dateISO))
-    .slice(0, 8);
+    .sort((a, b) => Number(b.category === "Clubs") - Number(a.category === "Clubs") || a.dateISO.localeCompare(b.dateISO));
   let nextIndex = 0;
-  const workers = Array.from({ length: 8 }, async () => {
+  const workers = Array.from({ length: Math.min(2, missingVenues.length) }, async () => {
     while (nextIndex < missingVenues.length) {
       const event = missingVenues[nextIndex++];
       const venue = await fetchVisitGlasgowVenue(event.ticketUrl);
-      if (venue && !isGenericVenue(venue)) event.venue = venue;
+      if (venue && !isGenericVenue(venue)) {
+        event.venue = venue;
+        event.area = venue;
+      } else {
+        event.venue = "Venue not listed";
+        event.area = "Venue not listed";
+      }
     }
   });
   await Promise.all(workers);
@@ -1435,6 +1469,7 @@ function parseSkinny(html) {
       dateISO,
       time: timeFromText(info.text()),
       description: "",
+      price: priceFromText(card.text()),
       image: imageFrom($, card, pageUrl),
       ticketUrl: safeUrl(card.find(".btn__buy-now[href]").first().attr("href"), pageUrl) || eventUrl,
       source: "The Skinny",
@@ -1479,6 +1514,7 @@ function parseWhatsOnGlasgow(html, pageUrl = "https://www.whatsonglasgow.co.uk/"
       dateISO,
       time: timeFromText(card.text()),
       description,
+      price: priceFromText(card.text()),
       image: imageFrom($, card, pageUrl),
       ticketUrl: eventUrl,
       source: "What's On Glasgow",
@@ -1511,6 +1547,7 @@ function parseGladCafe(html, pageUrl = "https://www.thegladcafe.co.uk/whats-on")
       dateISO,
       time: timeFromText(link.find(".EventBlock-time").text()),
       description: "",
+      price: priceFromText(link.text()),
       image: imageFrom($, link, pageUrl),
       ticketUrl: eventUrl,
       source: "The Glad Cafe",
@@ -1543,6 +1580,7 @@ function parseHugAndPint(html, pageUrl = "https://www.thehugandpint.com/whats-on
       dateISO,
       time: timeFromText(link.text()),
       description: "",
+      price: priceFromText(link.text()),
       image: imageFrom($, link, pageUrl),
       ticketUrl: eventUrl,
       source: "The Hug and Pint",
@@ -1576,6 +1614,7 @@ function parseTronTheatre(html, pageUrl = "https://www.tron.co.uk/whats-on/") {
       dateISO,
       time: "",
       description: "",
+      price: priceFromText(card.text()),
       image: imageFrom($, card, pageUrl),
       ticketUrl: eventUrl,
       source: "Tron Theatre",
@@ -1608,6 +1647,7 @@ function parseCitizensTheatre(html, pageUrl = "https://citz.co.uk/whats-on/") {
       dateISO,
       time: timeFromText(card.text()),
       description: card.find(".c-event-card__description").first().text().replace(/\s+/g, " ").trim(),
+      price: priceFromText(card.text()),
       image: imageFrom($, card, pageUrl),
       ticketUrl: eventUrl,
       source: "Citizens Theatre",
@@ -1649,6 +1689,7 @@ function parseGleeClub(html, pageUrl = "https://www.glee.co.uk/glasgow/") {
       dateISO,
       time: "",
       description: "",
+      price: priceFromText(card.text()),
       image: imageFrom($, card, pageUrl),
       ticketUrl,
       source: "The Glee Club Glasgow",
@@ -1672,6 +1713,7 @@ async function fetchVenue(venue) {
   const html = await response.text();
   if (html.length > 5_000_000) throw new Error("Venue page exceeded the size limit");
   const events = await venue.parse(html);
+  if (venue.name.startsWith("Visit Glasgow ·")) await enrichVisitGlasgowVenues(events);
   return events.map((event) => ({ ...event, area: event.area || venue.area }));
 }
 
@@ -1689,7 +1731,7 @@ function normalizeEventTitle(value) {
 }
 
 function isGenericVenue(venue) {
-  return ["", "citycentre", "online", "glasgow"].includes(normalizeEventText(venue));
+  return ["", "citycentre", "online", "glasgow", "venuenotlisted"].includes(normalizeEventText(venue));
 }
 
 function isAggregatedEvent(event) {
@@ -1744,7 +1786,10 @@ module.exports = async function handler(_request, response) {
   const events = deduplicateEvents([
     ...results.flatMap((result) => result.status === "fulfilled" ? result.value : []),
     ...featuredWorkshops,
-  ]);
+  ]).map((event) => ({
+    ...event,
+    price: event.price || priceFromText(event.description),
+  }));
   const sources = [
     ...VENUES.map((venue, index) => ({
       name: venue.name,
@@ -1763,7 +1808,6 @@ module.exports = async function handler(_request, response) {
   }
 
   events.sort((a, b) => `${a.dateISO} ${a.time || ""}`.localeCompare(`${b.dateISO} ${b.time || ""}`));
-  await enrichVisitGlasgowVenues(events);
   return response.status(200).json({
     events,
     sources,
