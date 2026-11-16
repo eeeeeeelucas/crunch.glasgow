@@ -1337,6 +1337,25 @@ function classifySourceEvent(title, details = "", eventType = "") {
 }
 
 const visitGlasgowVenueCache = new Map();
+const visitGlasgowVenueLookupLimit = 4;
+let activeVisitGlasgowVenueLookups = 0;
+const visitGlasgowVenueLookupQueue = [];
+
+async function withVisitGlasgowVenueLookup(callback) {
+  if (activeVisitGlasgowVenueLookups >= visitGlasgowVenueLookupLimit) {
+    await new Promise((resolve) => visitGlasgowVenueLookupQueue.push(resolve));
+  } else {
+    activeVisitGlasgowVenueLookups += 1;
+  }
+
+  try {
+    return await callback();
+  } finally {
+    const next = visitGlasgowVenueLookupQueue.shift();
+    if (next) next();
+    else activeVisitGlasgowVenueLookups -= 1;
+  }
+}
 
 async function fetchVisitGlasgowVenue(eventUrl) {
   const cached = visitGlasgowVenueCache.get(eventUrl);
@@ -1346,7 +1365,7 @@ async function fetchVisitGlasgowVenue(eventUrl) {
     if (visitGlasgowVenueCache.get(eventUrl) === cached) visitGlasgowVenueCache.delete(eventUrl);
   }
 
-  const lookup = (async () => {
+  const lookup = withVisitGlasgowVenueLookup(async () => {
     try {
       const url = new URL(eventUrl);
       if (url.protocol !== "https:" || url.hostname !== "www.visitglasgow.com") return "";
@@ -1356,7 +1375,7 @@ async function fetchVisitGlasgowVenue(eventUrl) {
           Accept: "text/html,application/xhtml+xml",
           "User-Agent": "GlasgowCoolEvents/1.0 (+https://www.glasgow.cool)",
         },
-        signal: AbortSignal.timeout(2500),
+        signal: AbortSignal.timeout(5000),
       });
       if (!response.ok || !response.headers.get("content-type")?.includes("text/html")) return "";
 
@@ -1370,7 +1389,7 @@ async function fetchVisitGlasgowVenue(eventUrl) {
     } catch {
       return "";
     }
-  })();
+  });
 
   const cacheEntry = { promise: lookup, expiresAt: Date.now() + 15 * 60 * 1000 };
   visitGlasgowVenueCache.set(eventUrl, cacheEntry);
