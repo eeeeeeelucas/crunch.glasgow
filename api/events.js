@@ -1309,7 +1309,7 @@ function classifySourceEvent(title, details = "", eventType = "") {
 }
 
 const visitGlasgowVenueCache = new Map();
-const visitGlasgowVenueLookupLimit = 4;
+const visitGlasgowVenueLookupLimit = 8;
 let activeVisitGlasgowVenueLookups = 0;
 const visitGlasgowVenueLookupQueue = [];
 
@@ -1408,27 +1408,6 @@ function parseVisitGlasgow(html, category) {
   });
 
   return events;
-}
-
-async function enrichVisitGlasgowVenues(events) {
-  const missingVenues = events
-    .filter((event) => event.source === "Visit Glasgow" && isGenericVenue(event.venue))
-    .sort((a, b) => Number(b.category === "Clubs") - Number(a.category === "Clubs") || a.dateISO.localeCompare(b.dateISO));
-  let nextIndex = 0;
-  const workers = Array.from({ length: Math.min(2, missingVenues.length) }, async () => {
-    while (nextIndex < missingVenues.length) {
-      const event = missingVenues[nextIndex++];
-      const venue = await fetchVisitGlasgowVenue(event.ticketUrl);
-      if (venue && !isGenericVenue(venue)) {
-        event.venue = venue;
-        event.area = venue;
-      } else {
-        event.venue = "Venue not listed";
-        event.area = "Venue not listed";
-      }
-    }
-  });
-  await Promise.all(workers);
 }
 
 function parseSkinny(html) {
@@ -1694,14 +1673,13 @@ async function fetchVenue(venue) {
       Accept: "text/html,application/xhtml+xml",
       "User-Agent": "GlasgowCoolEvents/1.0 (+https://www.glasgow.cool)",
     },
-    signal: AbortSignal.timeout(8000),
+    signal: AbortSignal.timeout(5000),
   });
   if (!response.ok) throw new Error(`Venue returned ${response.status}`);
 
   const html = await response.text();
   if (html.length > 5_000_000) throw new Error("Venue page exceeded the size limit");
   const events = await venue.parse(html);
-  if (venue.name.startsWith("Visit Glasgow ·")) await enrichVisitGlasgowVenues(events);
   return events.map((event) => ({ ...event, area: event.area || venue.area }));
 }
 
@@ -1799,3 +1777,5 @@ module.exports = async function handler(_request, response) {
     message: events.length ? undefined : "The venue pages loaded, but no upcoming events were found.",
   });
 };
+
+module.exports.lookupVisitGlasgowVenue = fetchVisitGlasgowVenue;
