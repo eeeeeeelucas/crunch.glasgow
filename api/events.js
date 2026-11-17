@@ -1385,7 +1385,12 @@ async function fetchVisitGlasgowVenue(eventUrl) {
       const venueBlock = $(".page-header__meta-contents").filter((_, element) => {
         return $(element).find(".page-header__meta-label").first().text().replace(/\s+/g, " ").trim().toLowerCase() === "where";
       }).first();
-      return venueBlock.find(".page-header__meta-value").first().text().replace(/\s+/g, " ").trim();
+      const listedVenue = venueBlock.find(".page-header__meta-value").first().text().replace(/\s+/g, " ").trim();
+      if (listedVenue) return listedVenue;
+
+      const description = $("main p").not(".credits__text").map((_, element) => $(element).text()).get().join(" ").replace(/\s+/g, " ").trim();
+      const hostedVenue = description.match(/(?:^|[.!?]\s+)((?:The\s+)?[A-Z][A-Za-z0-9'’&-]*(?:\s+[A-Z][A-Za-z0-9'’&-]*){0,4}\s+(?:Hospital|Museum|Gallery|Theatre|Theater|Centre|Center|Arts|Institute|Library|Park|Church|Hall|Studio|Academy|University|College|Cathedral|Hotel|Cinema|Gardens?))\s+will host\b/);
+      return hostedVenue?.[1].replace(/^The\s+/i, "").trim() || "";
     } catch {
       return "";
     }
