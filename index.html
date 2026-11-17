@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <meta name="theme-color" content="#050b14" />
-    <meta name="description" content="Browse upcoming events in Glasgow: live gigs, club nights, comedy, theatre, exhibitions, workshops and local markets. Filter by date, area and price to find free things to do today or this weekend." />
+    <meta name="description" content="Browse upcoming events in Glasgow: live gigs, club nights, comedy, theatre, exhibitions, workshops and local markets. Filter by date and area to find things to do today or this weekend." />
     <meta name="robots" content="index,follow,max-image-preview:large" />
     <link rel="canonical" href="https://www.glasgow.cool/" />
     <meta property="og:type" content="website" />
@@ -82,10 +82,6 @@
       .search span { color: var(--muted); font-size: 18px; }
       .search input { width: 100%; min-width: 0; padding: 14px 0; border: 0; outline: 0; background: transparent; color: var(--text); font-size: 13px; }
       .search input::placeholder { color: #5f6a7c; }
-      .price-filter { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 10px; padding: 9px 12px; border: 1px solid var(--border); border-radius: 8px; background: var(--panel); }
-      .price-filter span { color: var(--muted); font-size: 10px; font-weight: 800; letter-spacing: .08em; }
-      .price-filter select { max-width: 70%; padding: 4px 6px; border: 0; background: transparent; color: var(--text); font: inherit; font-size: 12px; text-align: right; }
-      .price-filter select:focus-visible { outline: 2px solid var(--lime); outline-offset: 3px; }
       .active-filters { display: flex; align-items: flex-start; gap: 8px; margin-top: 12px; }
       .active-filters[hidden] { display: none; }
       .filter-caption { flex: 0 0 auto; padding-top: 7px; color: var(--lime); font-size: 9px; font-weight: 800; letter-spacing: .08em; }
@@ -210,18 +206,6 @@
           <span class="sr-only" hidden>Search events</span>
           <input id="search-input" type="search" aria-label="Search band, venue, or area" placeholder="// Search band, venue, area..." autocomplete="off" />
         </label>
-        <label class="price-filter">
-          <span aria-hidden="true">PRICE</span>
-          <select id="price-filter" aria-label="Filter events by price">
-            <option value="any">Any price</option>
-            <option value="free">Free events</option>
-            <option value="under10">Under £10</option>
-            <option value="under25">Under £25</option>
-            <option value="under50">Under £50</option>
-            <option value="paid">Any paid event</option>
-            <option value="unknown">Price not listed</option>
-          </select>
-        </label>
         <div class="active-filters" id="active-filters" role="region" aria-label="Active filters" hidden>
           <span class="filter-caption">ACTIVE FILTERS</span>
           <div class="filter-chips" id="filter-chips"></div>
@@ -266,7 +250,6 @@
       const feedState = document.getElementById('feed-state');
       const eventCount = document.getElementById('event-count');
       const searchInput = document.getElementById('search-input');
-      const priceFilter = document.getElementById('price-filter');
       const activeFilters = document.getElementById('active-filters');
       const filterChips = document.getElementById('filter-chips');
       const categoryButtons = [...document.querySelectorAll('[data-category]')];
@@ -298,22 +281,6 @@
         if (/\bfree\b|£\s*0(?:\.00)?\b|\bcomplimentary\b|\bno charge\b/.test(text)) return 'free';
         if (price || /\bpaid(?:\s+(?:entry|admission|tickets?))?\b/.test(text)) return 'paid';
         return 'unknown';
-      }
-
-      function eventPriceAmount(event) {
-        if (eventPriceStatus(event) === 'free') return 0;
-        const match = String(event.price || '').match(/£\s*(\d+(?:\.\d{1,2})?)/i);
-        return match ? Number(match[1]) : null;
-      }
-
-      function matchesPrice(event) {
-        const selected = priceFilter.value;
-        const status = eventPriceStatus(event);
-        if (selected === 'any') return true;
-        if (selected === 'free' || selected === 'paid' || selected === 'unknown') return status === selected;
-        const maximum = { under10: 10, under25: 25, under50: 50 }[selected];
-        const amount = eventPriceAmount(event);
-        return maximum !== undefined && amount !== null && amount < maximum;
       }
 
       function formatDate(dateISO, time) {
@@ -352,9 +319,8 @@
         return events.filter((event) => {
           const matchesCategory = activeCategories.size === 0 || activeCategories.has(categoryFor(event));
           const matchesDate = !selectedDate || event.dateISO === selectedDate;
-          const matchesSelectedPrice = matchesPrice(event);
           const haystack = `${event.title} ${event.venue} ${event.area || ''} ${event.description || ''}`.toLowerCase();
-          return matchesCategory && matchesDate && matchesSelectedPrice && (!query || haystack.includes(query));
+          return matchesCategory && matchesDate && (!query || haystack.includes(query));
         });
       }
 
@@ -404,16 +370,6 @@
         if (selectedDate) {
           appendFilterChip(formatFilterDate(selectedDate), 'date', () => {
             selectedDate = '';
-            renderCalendar();
-            renderEvents();
-          });
-        }
-
-        if (priceFilter.value !== 'any') {
-          const label = priceFilter.selectedOptions[0]?.textContent.trim() || 'Price';
-          appendFilterChip(`PRICE · ${label}`, 'price', () => {
-            priceFilter.value = 'any';
-            visibleLimit = pageSize;
             renderCalendar();
             renderEvents();
           });
@@ -575,9 +531,8 @@
         const query = searchInput.value.trim().toLowerCase();
         const datesWithEvents = new Set(events.filter((event) => {
           const matchesCategory = activeCategories.size === 0 || activeCategories.has(categoryFor(event));
-          const matchesSelectedPrice = matchesPrice(event);
           const haystack = `${event.title} ${event.venue} ${event.area || ''} ${event.description || ''}`.toLowerCase();
-          return matchesCategory && matchesSelectedPrice && (!query || haystack.includes(query));
+          return matchesCategory && (!query || haystack.includes(query));
         }).map((event) => event.dateISO));
         for (let day = 1; day <= daysInMonth; day += 1) {
           const dateISO = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
@@ -647,11 +602,6 @@
         renderEvents();
       }));
       searchInput.addEventListener('input', () => {
-        visibleLimit = pageSize;
-        renderCalendar();
-        renderEvents();
-      });
-      priceFilter.addEventListener('change', () => {
         visibleLimit = pageSize;
         renderCalendar();
         renderEvents();
