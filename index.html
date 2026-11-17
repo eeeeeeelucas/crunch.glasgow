@@ -254,6 +254,8 @@
       const categoryButtons = [...document.querySelectorAll('[data-category]')];
       const loadMoreButton = document.getElementById('load-more');
       const pageSize = 15;
+      const resolvedVisitVenueUrls = new Set();
+      const pendingVisitVenueUrls = new Set();
       const today = new Date();
       const calendarStart = new Date(today.getFullYear(), today.getMonth(), 1);
       const calendarEnd = new Date(today.getFullYear(), today.getMonth() + 6, 1);
@@ -313,6 +315,45 @@
           const haystack = `${event.title} ${event.venue} ${event.area || ''} ${event.description || ''}`.toLowerCase();
           return matchesCategory && matchesDate && (!query || haystack.includes(query));
         });
+      }
+
+      async function loadVisibleVisitGlasgowVenues(visibleCards) {
+        const urls = [...new Set(visibleCards
+          .filter((event) => event.source === 'Visit Glasgow' && event.venue === 'Glasgow')
+          .map((event) => event.ticketUrl))]
+          .filter((url) => url && !resolvedVisitVenueUrls.has(url) && !pendingVisitVenueUrls.has(url))
+          .slice(0, pageSize);
+        if (!urls.length) return;
+
+        urls.forEach((url) => pendingVisitVenueUrls.add(url));
+        try {
+          const response = await fetch('/api/visit-venues', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+            body: JSON.stringify({ urls }),
+          });
+          const result = await response.json();
+          if (!response.ok) throw new Error(result.error || 'Could not load event venues.');
+
+          let changed = false;
+          events.forEach((event) => {
+            const venue = result.venues?.[event.ticketUrl];
+            if (event.source === 'Visit Glasgow' && venue) {
+              event.venue = venue;
+              event.area = venue;
+              changed = true;
+            }
+          });
+          urls.forEach((url) => resolvedVisitVenueUrls.add(url));
+          if (changed) {
+            updateEventStructuredData();
+            renderEvents();
+          }
+        } catch {
+          return;
+        } finally {
+          urls.forEach((url) => pendingVisitVenueUrls.delete(url));
+        }
       }
 
       function formatFilterDate(dateISO) {
@@ -452,6 +493,7 @@
           card.append(artwork, body, footer);
           eventsGrid.append(card);
         });
+        void loadVisibleVisitGlasgowVenues(visibleCards);
       }
 
       async function loadEvents() {
