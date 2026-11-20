@@ -1745,7 +1745,7 @@ function deduplicateEvents(events) {
 }
 
 module.exports = async function handler(_request, response) {
-  response.setHeader("Cache-Control", "public, s-maxage=900, stale-while-revalidate=1800");
+  response.setHeader("Cache-Control", "public, s-maxage=86400, stale-while-revalidate=1800");
 
   const results = await Promise.allSettled(VENUES.map(fetchVenue));
   const featuredWorkshops = FEATURED_WORKSHOPS.filter((event) => isUpcoming(event.dateISO));
